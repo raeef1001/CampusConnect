@@ -3,15 +3,22 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { Navbar } from "@/components/layout/Navbar";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { FloatingChat } from "@/components/ui/floating-chat";
+import { db } from '@/lib/firebase';
+import { collection, query, orderBy, where, onSnapshot, Timestamp, doc, getDoc, getDocs, Query, limit, startAfter, QueryDocumentSnapshot } from 'firebase/firestore';
 import { ListingCard } from "@/components/marketplace/ListingCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getUser } from "@/utils/auth";
 import { FilterSidebar } from "@/components/marketplace/FilterSidebar";
-import { Pagination, PaginationContent, PaginationItem, PaginationPrevious, PaginationNext, PaginationLink } from "@/components/ui/pagination";
+import { Pagination, PaginationContent, PaginationItem, PaginationPrevious, PaginationLink, PaginationNext } from "@/components/ui/pagination";
 import { Listing } from '@/types/listing';
-import { useListings } from '@/context/ListingContext'; // Import useListings hook
-import { db } from '@/lib/firebase'; // Keep db for bookmark query
-import { collection, query, where, onSnapshot } from 'firebase/firestore'; // Keep necessary Firestore imports for bookmarks
+
+interface SellerProfile {
+  userId: string;
+  name: string;
+  avatar?: string;
+  university: string;
+  rating: number;
+}
 
 interface FilterState {
   category: string;
@@ -23,13 +30,20 @@ interface FilterState {
 
 export default function Listings() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [listings, setListings] = useState<Listing[]>([]);
+  const [allListings, setAllListings] = useState<Listing[]>([]);
+  const [loading, setLoading] = useState(true);
   const location = useLocation();
   const navigate = useNavigate();
-  const { listings: allListings, loading: listingsLoading, error: listingsError } = useListings(); // Use listings from context
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const [listingsPerPage] = useState(9);
+  const [lastVisible, setLastVisible] = useState<QueryDocumentSnapshot | null>(null);
+  const [firstVisible, setFirstVisible] = useState<QueryDocumentSnapshot | null>(null);
+  const [hasMore, setHasMore] = useState(true);
+  const [hasPrevious, setHasPrevious] = useState(false);
+  const [totalListingsCount, setTotalListingsCount] = useState(0);
 
   // Filter states
   const [filters, setFilters] = useState<FilterState>({
@@ -41,28 +55,14 @@ export default function Listings() {
   });
   const [searchQuery, setSearchQuery] = useState("");
   const [sellerNameFilter, setSellerNameFilter] = useState("");
-  const [bookmarkedListingIds, setBookmarkedListingIds] = useState<string[]>([]);
-
-  useEffect(() => {
-    const queryParams = new URLSearchParams(location.search);
-    const searchParam = queryParams.get("search");
-    setSearchQuery(searchParam || "");
-
-    const currentUser = getUser();
-    if (currentUser) {
-      const bookmarksQuery = query(collection(db, "bookmarks"), where("userId", "==", currentUser.uid));
-      const unsubscribeBookmarks = onSnapshot(bookmarksQuery, (snapshot) => {
-        setBookmarkedListingIds(snapshot.docs.map(doc => doc.data().listingId));
-      }, (error) => {
-        console.error("Error fetching bookmarked listing IDs: ", error);
-      });
-      return () => unsubscribeBookmarks();
-    }
-  }, [location.search]);
 
   const handleFilterChange = useCallback((newFilters: FilterState) => {
     setFilters((prevFilters) => ({ ...prevFilters, ...newFilters }));
-    setCurrentPage(1); // Reset to first page on filter change
+    setCurrentPage(1);
+    setLastVisible(null);
+    setFirstVisible(null);
+    setHasPrevious(false);
+    setHasMore(true);
   }, []);
 
   const handleResetFilters = useCallback(() => {
@@ -75,90 +75,316 @@ export default function Listings() {
     });
     setSearchQuery("");
     setSellerNameFilter("");
-    setCurrentPage(1); // Reset to first page on filter change
+    setCurrentPage(1);
+    setLastVisible(null);
+    setFirstVisible(null);
+    setHasPrevious(false);
+    setHasMore(true);
   }, []);
 
-  const filteredListings = useMemo(() => {
-    const queryParams = new URLSearchParams(location.search);
-    const filterParam = queryParams.get("filter");
-    const currentUser = getUser();
+  // Helper function to normalize condition values
+  const normalizeCondition = (condition: string): string => {
+    const conditionMap: { [key: string]: string } = {
+      'new': 'New',
+      'like-new': 'Like New',
+      'good': 'Good',
+      'fair': 'Fair',
+      'New': 'New',
+      'Like New': 'Like New',
+      'Good': 'Good',
+      'Fair': 'Fair'
+    };
+    return conditionMap[condition] || condition;
+  };
 
-    let currentFilteredListings = allListings;
+  // Client-side filtering function
+  const applyClientSideFilters = useCallback((listingsData: Listing[]): Listing[] => {
+    let filteredListings = [...listingsData];
 
-    // Apply "my-listings" filter
-    if (filterParam === "my-listings" && currentUser) {
-      currentFilteredListings = currentFilteredListings.filter(listing => {
-        const sellerId = listing.sellerId || listing.userId || listing.createdBy || listing.seller?.userId || '';
-        return sellerId && sellerId === currentUser.uid;
-      });
-    } else if (filterParam === "bookmarked-listings" && currentUser) {
-      currentFilteredListings = currentFilteredListings.filter(listing =>
-        bookmarkedListingIds.includes(listing.id)
-      );
-    }
-
-    // Apply category filter
+    // Category filter - check both category and categories fields
     if (filters.category) {
-      currentFilteredListings = currentFilteredListings.filter(listing =>
-        listing.category === filters.category
-      );
-    }
-
-    // Apply price range filter
-    if (filters.priceRange[0] > 0 || filters.priceRange[1] < 1000) {
-      currentFilteredListings = currentFilteredListings.filter(listing => {
-        const listingPrice = parseFloat(listing.price);
-        return listingPrice >= filters.priceRange[0] && listingPrice <= filters.priceRange[1];
+      filteredListings = filteredListings.filter(listing => {
+        const categoryMatch = listing.category?.toLowerCase() === filters.category.toLowerCase();
+        const categoriesMatch = listing.categories?.some(cat => 
+          cat.toLowerCase() === filters.category.toLowerCase()
+        );
+        return categoryMatch || categoriesMatch;
       });
     }
 
-    // Apply condition filter
+    // Price range filter - handle string prices
+    if (filters.priceRange[0] > 0 || filters.priceRange[1] < 1000) {
+      filteredListings = filteredListings.filter(listing => {
+        const price = parseFloat(listing.price) || 0;
+        return price >= filters.priceRange[0] && price <= filters.priceRange[1];
+      });
+    }
+
+    // Condition filter - normalize conditions for comparison
     if (filters.condition.length > 0) {
-      currentFilteredListings = currentFilteredListings.filter(listing =>
-        filters.condition.includes(listing.condition)
-      );
+      filteredListings = filteredListings.filter(listing => {
+        const normalizedListingCondition = normalizeCondition(listing.condition);
+        return filters.condition.some(filterCondition => 
+          normalizeCondition(filterCondition) === normalizedListingCondition
+        );
+      });
     }
 
-    // Apply university filter
+    // University filter
     if (filters.university) {
-      currentFilteredListings = currentFilteredListings.filter(listing =>
-        listing.seller?.university === filters.university
-      );
+      filteredListings = filteredListings.filter(listing => {
+        const sellerUniversity = listing.seller?.university?.toLowerCase() || '';
+        return sellerUniversity === filters.university.toLowerCase();
+      });
     }
 
-    // Apply seller name filter
+    // Seller name filter
     if (sellerNameFilter) {
       const lowercasedSellerName = sellerNameFilter.toLowerCase();
-      currentFilteredListings = currentFilteredListings.filter(listing =>
-        listing.seller?.name.toLowerCase().startsWith(lowercasedSellerName)
-      );
+      filteredListings = filteredListings.filter(listing => {
+        const sellerName = listing.seller?.name?.toLowerCase() || '';
+        return sellerName.includes(lowercasedSellerName);
+      });
     }
 
-    // Apply search query filter (title/description)
+    // Search query filter
     if (searchQuery) {
       const lowercasedSearchQuery = searchQuery.toLowerCase();
-      currentFilteredListings = currentFilteredListings.filter(listing =>
+      filteredListings = filteredListings.filter(listing =>
         listing.title.toLowerCase().includes(lowercasedSearchQuery) ||
         listing.description.toLowerCase().includes(lowercasedSearchQuery)
       );
     }
 
-    return currentFilteredListings;
-  }, [allListings, filters, searchQuery, sellerNameFilter, location.search, bookmarkedListingIds]);
+    return filteredListings;
+  }, [filters, sellerNameFilter, searchQuery]);
 
-  const totalPages = Math.ceil(filteredListings.length / listingsPerPage);
+  // Memoized filtered listings
+  const filteredListings = useMemo(() => {
+    return applyClientSideFilters(allListings);
+  }, [allListings, applyClientSideFilters]);
+
+  // Paginated listings
   const paginatedListings = useMemo(() => {
     const startIndex = (currentPage - 1) * listingsPerPage;
     const endIndex = startIndex + listingsPerPage;
     return filteredListings.slice(startIndex, endIndex);
   }, [filteredListings, currentPage, listingsPerPage]);
 
+  useEffect(() => {
+    const queryParams = new URLSearchParams(location.search);
+    const filterParam = queryParams.get("filter");
+    const searchParam = queryParams.get("search");
+    setSearchQuery(searchParam || "");
+    const currentUser = getUser();
+
+    const listingsCollectionRef = collection(db, "listings");
+    let baseQuery: Query = query(listingsCollectionRef, orderBy("createdAt", "desc"));
+
+    let unsubscribe: () => void = () => {};
+
+    const fetchListings = async () => {
+      setLoading(true);
+
+      if (filterParam === "bookmarked-listings" && currentUser) {
+        const bookmarksQuery = query(collection(db, "bookmarks"), where("userId", "==", currentUser.uid));
+        unsubscribe = onSnapshot(bookmarksQuery, async (bookmarkSnapshot) => {
+          const bookmarkedListingIds = bookmarkSnapshot.docs.map(doc => doc.data().listingId);
+          
+          if (bookmarkedListingIds.length > 0) {
+            const batchSize = 10;
+            const listingBatches: Promise<Listing[]>[] = [];
+
+            for (let i = 0; i < bookmarkedListingIds.length; i += batchSize) {
+              const batchIds = bookmarkedListingIds.slice(i, i + batchSize);
+              const listingsBatchQuery = query(collection(db, "listings"), where("id", "in", batchIds));
+              listingBatches.push(
+                getDocs(listingsBatchQuery).then(async (snapshot) => {
+                  const batchListings: Listing[] = [];
+                  for (const docSnapshot of snapshot.docs) {
+                    const data = docSnapshot.data();
+                    let sellerData: SellerProfile = data.seller || {};
+
+                    if (!sellerData.name || sellerData.name === "Unknown Seller" || !sellerData.university || sellerData.university === "Unknown University") {
+                      const userIdToFetch = data.sellerId || 
+                                           data.userId || 
+                                           data.createdBy || 
+                                           data.seller?.userId || 
+                                           '';
+                      if (userIdToFetch) {
+                        try {
+                          const userDocRef = doc(db, "users", userIdToFetch);
+                          const userDocSnap = await getDoc(userDocRef);
+                          if (userDocSnap.exists()) {
+                            const userData = userDocSnap.data();
+                            sellerData = {
+                              userId: userIdToFetch,
+                              name: userData.name || userData.email?.split('@')[0] || "Unknown Seller",
+                              avatar: userData.avatar || "",
+                              university: userData.university || "Unknown University",
+                              rating: userData.rating || 0,
+                            };
+                          } else {
+                            sellerData = {
+                              userId: userIdToFetch,
+                              name: "Unknown Seller",
+                              avatar: "",
+                              university: "Unknown University",
+                              rating: 0,
+                            };
+                            console.warn(`Seller profile not found for userId: ${userIdToFetch}`);
+                          }
+                        } catch (userFetchError) {
+                          console.error(`Error fetching user profile for ${userIdToFetch}:`, userFetchError);
+                          sellerData = {
+                            userId: userIdToFetch,
+                            name: "Unknown Seller",
+                            avatar: "",
+                            university: "Unknown University",
+                            rating: 0,
+                          };
+                        }
+                      } else {
+                        sellerData = {
+                          userId: "",
+                          name: "Unknown Seller",
+                          avatar: "",
+                          university: "Unknown University",
+                          rating: 0,
+                        };
+                      }
+                    }
+                    const listing = { id: docSnapshot.id, ...data, seller: sellerData } as Listing;
+                    batchListings.push(listing);
+                  }
+                  return batchListings;
+                })
+              );
+            }
+            const allFetchedListings = (await Promise.all(listingBatches)).flat();
+            setAllListings(allFetchedListings);
+          } else {
+            setAllListings([]);
+          }
+          setLoading(false);
+        }, (error) => {
+          console.error("Error fetching bookmarked listings: ", error);
+          setLoading(false);
+        });
+        return;
+      }
+
+      // Fetch all listings for client-side filtering
+      unsubscribe = onSnapshot(baseQuery, async (snapshot) => {
+        let listingsData: Listing[] = [];
+        for (const docSnapshot of snapshot.docs) {
+          const data = docSnapshot.data();
+          let sellerData: SellerProfile = data.seller || {};
+
+          if (!sellerData.name || sellerData.name === "Unknown Seller" || !sellerData.university || sellerData.university === "Unknown University") {
+            const userIdToFetch = data.sellerId || 
+                                 data.userId || 
+                                 data.createdBy || 
+                                 data.seller?.userId || 
+                                 '';
+            if (userIdToFetch) {
+              try {
+                const userDocRef = doc(db, "users", userIdToFetch);
+                const userDocSnap = await getDoc(userDocRef);
+                if (userDocSnap.exists()) {
+                  const userData = userDocSnap.data();
+                  sellerData = {
+                    userId: userIdToFetch,
+                    name: userData.name || userData.email?.split('@')[0] || "Unknown Seller",
+                    avatar: userData.avatar || "",
+                    university: userData.university || "Unknown University",
+                    rating: userData.rating || 0,
+                  };
+                } else {
+                  sellerData = {
+                    userId: userIdToFetch,
+                    name: "Unknown Seller",
+                    avatar: "",
+                    university: "Unknown University",
+                    rating: 0,
+                  };
+                  console.warn(`Seller profile not found for userId: ${userIdToFetch}`);
+                }
+              } catch (userFetchError) {
+                console.error(`Error fetching user profile for ${userIdToFetch}:`, userFetchError);
+                sellerData = {
+                  userId: userIdToFetch,
+                  name: "Unknown Seller",
+                  avatar: "",
+                  university: "Unknown University",
+                  rating: 0,
+                };
+              }
+            } else {
+              sellerData = {
+                userId: "",
+                name: "Unknown Seller",
+                avatar: "",
+                university: "Unknown University",
+                rating: 0,
+              };
+            }
+          }
+
+          const listing = {
+            id: docSnapshot.id,
+            ...data,
+            seller: sellerData,
+          } as Listing;
+          listingsData.push(listing);
+        }
+
+        // Client-side filtering for "my-listings"
+        if (filterParam === "my-listings" && currentUser) {
+          console.log("Filtering my-listings for user:", currentUser.uid);
+          listingsData = listingsData.filter(listing => {
+            const sellerId = listing.sellerId || 
+                            listing.userId || 
+                            listing.createdBy || 
+                            listing.seller?.userId || 
+                            '';
+            
+            console.log("Listing:", listing.title, "sellerId:", sellerId, "matches:", sellerId === currentUser.uid);
+            
+            return sellerId && sellerId === currentUser.uid;
+          });
+          console.log("Filtered listings count:", listingsData.length);
+        }
+
+        setAllListings(listingsData);
+        setTotalListingsCount(listingsData.length);
+        setLoading(false);
+
+      }, (error) => {
+        console.error("Error fetching listings: ", error);
+        setLoading(false);
+      });
+    };
+
+    fetchListings();
+
+    return () => unsubscribe();
+  }, [location.search]);
+
+  // Update listings when filters change
+  useEffect(() => {
+    setListings(paginatedListings);
+    setCurrentPage(1);
+  }, [paginatedListings]);
+
+  // Calculate pagination info
+  const totalPages = Math.ceil(filteredListings.length / listingsPerPage);
+
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
+    setLastVisible(null);
+    setFirstVisible(null);
   };
-
-  const hasPrevious = currentPage > 1;
-  const hasNext = currentPage < totalPages;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -185,15 +411,22 @@ export default function Listings() {
               <h1 className="text-3xl font-bold mb-4">Marketplace Listings</h1>
               <p className="text-lg text-gray-600 mb-8">Browse items and services offered by students.</p>
               
-              {listingsLoading ? (
+              {/* Filter Results Summary */}
+              {(filters.category || filters.priceRange[0] > 0 || filters.priceRange[1] < 1000 || 
+                filters.condition.length > 0 || filters.university || sellerNameFilter || searchQuery) && (
+                <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-sm text-blue-800">
+                    Showing {filteredListings.length} of {allListings.length} listings
+                    {filteredListings.length !== allListings.length && " (filtered)"}
+                  </p>
+                </div>
+              )}
+              
+              {loading ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                   {[...Array(listingsPerPage)].map((_, i) => (
                     <Skeleton key={i} className="h-72 w-full rounded-lg" />
                   ))}
-                </div>
-              ) : listingsError ? (
-                <div className="col-span-full bg-red-100 p-6 rounded-lg shadow-sm border border-red-200 text-center text-red-700">
-                  <p>Error loading listings: {listingsError}</p>
                 </div>
               ) : (
                 <>
@@ -208,9 +441,9 @@ export default function Listings() {
                           condition={listing.condition}
                           description={listing.description}
                           image={listing.imageUrl || "/placeholder.svg"}
-                          category={listing.category || ''}
+                          category={listing.categories?.join(', ') || listing.category || ''}
                           seller={listing.seller || { name: "Unknown Seller", userId: "", university: "Unknown", rating: 0 }}
-                          isService={listing.category === "Services"}
+                          isService={listing.categories?.includes("Services") || false}
                           locations={listing.locations}
                           deliveryRadius={listing.deliveryRadius}
                           isAvailable={listing.isAvailable}
@@ -219,26 +452,32 @@ export default function Listings() {
                       ))
                     ) : (
                       <div className="col-span-full bg-white p-6 rounded-lg shadow-sm border border-gray-100 text-center">
-                        <p className="text-gray-500">No listings found. Adjust your filters or be the first to create one!</p>
+                        <p className="text-gray-500">
+                          {allListings.length === 0 
+                            ? "No listings found. Be the first to create one!" 
+                            : "No listings match your current filters. Try adjusting your search criteria."
+                          }
+                        </p>
                       </div>
                     )}
                   </div>
 
-                  {paginatedListings.length > 0 && (
+                  {filteredListings.length > listingsPerPage && (
                     <div className="mt-8 flex justify-center">
                       <Pagination>
                         <PaginationContent>
                           <PaginationItem>
                             <PaginationPrevious 
                               onClick={() => handlePageChange(currentPage - 1)} 
-                              className={!hasPrevious ? "pointer-events-none opacity-50" : undefined} 
+                              className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"} 
                             />
                           </PaginationItem>
-                          {totalPages > 0 && Array.from({ length: totalPages }).map((_, i) => (
-                            <PaginationItem key={i}>
-                              <PaginationLink
-                                onClick={() => handlePageChange(i + 1)}
+                          {Array.from({ length: totalPages }, (_, i) => (
+                            <PaginationItem key={i + 1}>
+                              <PaginationLink 
+                                onClick={() => handlePageChange(i + 1)} 
                                 isActive={currentPage === i + 1}
+                                className="cursor-pointer"
                               >
                                 {i + 1}
                               </PaginationLink>
@@ -247,7 +486,7 @@ export default function Listings() {
                           <PaginationItem>
                             <PaginationNext 
                               onClick={() => handlePageChange(currentPage + 1)} 
-                              className={!hasNext ? "pointer-events-none opacity-50" : undefined} 
+                              className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"} 
                             />
                           </PaginationItem>
                         </PaginationContent>
@@ -261,7 +500,7 @@ export default function Listings() {
         </div>
       </div>
       
-      <FloatingChat listings={paginatedListings} />
+      <FloatingChat listings={listings} />
     </div>
   );
 }

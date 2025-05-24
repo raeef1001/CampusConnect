@@ -111,14 +111,19 @@ export const BidDialog: React.FC<BidDialogProps> = ({ isOpen, onClose, listing }
 
       await addDoc(collection(db, "messages"), chatMessage);
 
-      // Create notification for seller
-      await addNotification({
-        userId: listing.sellerId,
-        type: "bid",
-        message: `New bid of $${bidAmount} received for "${listing.title}" from ${user.displayName || user.email?.split('@')[0]}`,
-        relatedId: listing.id,
-        bidId: bidRef.id,
-      });
+      // Create notification for seller (with error handling to prevent hanging)
+      try {
+        await addNotification({
+          userId: listing.sellerId,
+          type: "bid",
+          message: `New bid of $${bidAmount} received for "${listing.title}" from ${user.displayName || user.email?.split('@')[0]}`,
+          relatedId: listing.id,
+          bidId: bidRef.id,
+        });
+      } catch (notificationError) {
+        console.error("Error creating notification (non-critical):", notificationError);
+        // Don't fail the entire bid submission if notification fails
+      }
 
       toast({
         title: "Bid Submitted Successfully!",
