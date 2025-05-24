@@ -24,4 +24,5 @@ export interface Listing {
     rating: number;
     userId: string;
   };
+  isService?: boolean; // Added for service listings
 }
