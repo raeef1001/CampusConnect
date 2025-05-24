@@ -60,8 +60,15 @@ export default function EditListing() {
         if (docSnap.exists()) {
           const listingData = docSnap.data();
           
+          // Handle different possible field names for seller ID
+          const sellerId = listingData.sellerId || 
+                           listingData.userId || 
+                           listingData.createdBy || 
+                           listingData.seller?.userId || 
+                           '';
+          
           // Check if current user is the owner
-          if (listingData.userId !== user.uid) {
+          if (sellerId !== user.uid) {
             setError("You can only edit your own listings.");
             setLoading(false);
             return;

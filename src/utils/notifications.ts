@@ -3,9 +3,10 @@ import { collection, addDoc, serverTimestamp, doc, getDoc } from "firebase/fires
 
 interface NewNotification {
   userId: string;
-  type: "listing" | "message" | "profile" | "system" | "bookmark";
+  type: "listing" | "message" | "profile" | "system" | "bookmark" | "bid";
   message: string;
   relatedId?: string; // e.g., listingId, chatId, userId
+  bidId?: string; // For bid-related notifications
 }
 
 export const addNotification = async (notification: NewNotification) => {
