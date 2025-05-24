@@ -50,22 +50,50 @@ export function OutgoingOrders() {
         const ordersList: OrderWithListing[] = [];
         
         for (const docSnapshot of snapshot.docs) {
-          const orderData = { id: docSnapshot.id, ...docSnapshot.data() } as OrderWithListing;
+          const orderData = { id: docSnapshot.id, ...docSnapshot.data() } as any;
           
-          // Fetch listing details
-          try {
-            const listingDoc = await getDoc(doc(db, "listings", orderData.listingId));
-            if (listingDoc.exists()) {
-              orderData.listing = {
-                id: listingDoc.id,
-                ...listingDoc.data()
-              } as OrderWithListing['listing'];
+          // Handle new order structure with items array
+          if (orderData.items && Array.isArray(orderData.items)) {
+            // Process each item in the order
+            for (const item of orderData.items) {
+              const orderItem: OrderWithListing = {
+                id: orderData.id,
+                buyerId: orderData.buyerId,
+                buyerName: orderData.buyerInfo?.fullName || 'Unknown Buyer',
+                buyerEmail: orderData.buyerInfo?.email || '',
+                sellerId: item.sellerId,
+                listingId: item.listingId,
+                listingTitle: item.listing?.title || 'Unknown Item',
+                quantity: item.quantity,
+                unitPrice: item.listing?.price || '0',
+                totalAmount: orderData.totalAmount,
+                status: orderData.status,
+                paymentStatus: orderData.paymentStatus || 'pending',
+                deliveryMethod: 'shipping',
+                createdAt: orderData.createdAt,
+                updatedAt: orderData.updatedAt,
+                sellerName: item.listing?.seller?.name || 'Unknown Seller',
+                sellerEmail: item.listing?.seller?.email || '',
+                shippingAddress: orderData.buyerInfo,
+                listing: item.listing
+              };
+              ordersList.push(orderItem);
             }
-          } catch (error) {
-            console.error("Error fetching listing for order:", error);
+          } else {
+            // Handle legacy order structure
+            try {
+              const listingDoc = await getDoc(doc(db, "listings", orderData.listingId));
+              if (listingDoc.exists()) {
+                orderData.listing = {
+                  id: listingDoc.id,
+                  ...listingDoc.data()
+                } as OrderWithListing['listing'];
+              }
+            } catch (error) {
+              console.error("Error fetching listing for order:", error);
+            }
+            ordersList.push(orderData as OrderWithListing);
           }
-          
-          ordersList.push(orderData);
         }
         
         // Sort orders by createdAt in descending order (newest first)

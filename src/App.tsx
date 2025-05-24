@@ -18,16 +18,13 @@ import EditListing from "./pages/EditListing";
 import ListingDetails from "./pages/ListingDetails";
 import Admin from "./pages/Admin";
 import AdminSetup from "./pages/AdminSetup";
-<<<<<<< HEAD
 import CartPage from "./pages/Cart";
+import CheckoutPage from "./pages/Checkout";
 import MyBidsPage from "./pages/MyBids";
 import ReceivedBidsPage from "./pages/ReceivedBids";
 import IncomingOrdersPage from "./pages/IncomingOrders";
 import OutgoingOrdersPage from "./pages/OutgoingOrders";
-=======
-import CartPage from "./pages/Cart"; // Import CartPage
-import ModerationPage from "./pages/ModerationPage"; // New import for moderation page
->>>>>>> bb7217a54ab15460e12023f2cf354ab72a9bbc86
+import ModerationPage from "./pages/ModerationPage";
 import NotFound from "./pages/NotFound";
 import { auth } from "./lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
@@ -223,25 +220,6 @@ const AnimatedRoutes = ({ isAuthenticated }: AnimatedRoutesProps) => {
             {isAuthenticated ? <EditListing /> : <Navigate to="/auth" />}
           </motion.div>
         } />
-<<<<<<< HEAD
-        <Route path="/cart" element={
-          <motion.div
-            key="cart-page"
-=======
-        <Route path="/admin" element={
-          <motion.div
-            key="admin"
->>>>>>> bb7217a54ab15460e12023f2cf354ab72a9bbc86
-            initial="initial"
-            animate="in"
-            exit="out"
-            variants={pageVariants}
-            transition={pageTransition}
-          >
-<<<<<<< HEAD
-            {isAuthenticated ? <CartPage /> : <Navigate to="/auth" />}
-          </motion.div>
-        } />
         <Route path="/admin" element={
           <motion.div
             key="admin"
@@ -251,8 +229,6 @@ const AnimatedRoutes = ({ isAuthenticated }: AnimatedRoutesProps) => {
             variants={pageVariants}
             transition={pageTransition}
           >
-=======
->>>>>>> bb7217a54ab15460e12023f2cf354ab72a9bbc86
             {isAuthenticated ? <Admin /> : <Navigate to="/auth" />}
           </motion.div>
         }>
@@ -270,22 +246,39 @@ const AnimatedRoutes = ({ isAuthenticated }: AnimatedRoutesProps) => {
             {isAuthenticated ? <AdminSetup /> : <Navigate to="/auth" />}
           </motion.div>
         } />
-<<<<<<< HEAD
-        <Route path="/bids/my-bids" element={
-          <motion.div
-            key="my-bids"
-=======
         <Route path="/cart" element={
           <motion.div
             key="cart-page"
->>>>>>> bb7217a54ab15460e12023f2cf354ab72a9bbc86
             initial="initial"
             animate="in"
             exit="out"
             variants={pageVariants}
             transition={pageTransition}
           >
-<<<<<<< HEAD
+            {isAuthenticated ? <CartPage /> : <Navigate to="/auth" />}
+          </motion.div>
+        } />
+        <Route path="/checkout" element={
+          <motion.div
+            key="checkout"
+            initial="initial"
+            animate="in"
+            exit="out"
+            variants={pageVariants}
+            transition={pageTransition}
+          >
+            {isAuthenticated ? <CheckoutPage /> : <Navigate to="/auth" />}
+          </motion.div>
+        } />
+        <Route path="/bids/my-bids" element={
+          <motion.div
+            key="my-bids"
+            initial="initial"
+            animate="in"
+            exit="out"
+            variants={pageVariants}
+            transition={pageTransition}
+          >
             {isAuthenticated ? <MyBidsPage /> : <Navigate to="/auth" />}
           </motion.div>
         } />
@@ -323,9 +316,6 @@ const AnimatedRoutes = ({ isAuthenticated }: AnimatedRoutesProps) => {
             transition={pageTransition}
           >
             {isAuthenticated ? <IncomingOrdersPage /> : <Navigate to="/auth" />}
-=======
-            {isAuthenticated ? <CartPage /> : <Navigate to="/auth" />}
->>>>>>> bb7217a54ab15460e12023f2cf354ab72a9bbc86
           </motion.div>
         } />
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

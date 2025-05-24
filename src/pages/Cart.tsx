@@ -288,8 +288,8 @@ export default function CartPage() { // Renamed component to CartPage for clarit
                           <span>Total Estimate:</span>
                           <span>${calculateTotalPrice()}</span>
                         </div>
-                        <Button className="w-full mt-6 text-lg py-3 h-auto">
-                          Proceed to Checkout
+                        <Button className="w-full mt-6 text-lg py-3 h-auto" asChild>
+                          <Link to="/checkout">Proceed to Checkout</Link>
                         </Button>
                          <p className="text-xs text-muted-foreground text-center mt-2">Secure and encrypted checkout.</p>
                       </CardContent>
