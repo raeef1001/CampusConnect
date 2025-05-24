@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label"; // Added for edit form
 import { Textarea } from "@/components/ui/textarea"; // Added for edit form
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog"; // Added for edit profile dialog
 import { Edit, Mail, Phone, MapPin } from "lucide-react";
+import LocationPickerMap from "@/components/LocationPickerMap"; // Import the new map component
 import { auth, db } from "@/lib/firebase"; // Import auth and db
 import { doc, getDoc, updateDoc, setDoc } from "firebase/firestore"; // Import firestore functions, added updateDoc and setDoc
 import { onAuthStateChanged } from "firebase/auth"; // Import onAuthStateChanged
@@ -28,7 +29,8 @@ interface UserProfile {
   contact?: {
     email?: string;
     phone?: string;
-    location?: string;
+    location?: string; // Stores coordinates "lat,lng"
+    displayLocation?: string; // Stores human-readable address
   };
   listingsCount?: number;
   reviewsCount?: number;
@@ -46,11 +48,27 @@ export default function Profile() {
   const [editMajor, setEditMajor] = useState('');
   const [editBio, setEditBio] = useState('');
   const [editPhone, setEditPhone] = useState('');
-  const [editLocation, setEditLocation] = useState('');
+  const [editLocation, setEditLocation] = useState(''); // Stores coordinates "lat,lng"
+  const [displayLocation, setDisplayLocation] = useState(''); // Stores human-readable address
   const [editAvatarFile, setEditAvatarFile] = useState<File | null>(null); // For profile image upload
   const [uploadingAvatar, setUploadingAvatar] = useState(false); // Loading state for avatar upload
 
   const { toast } = useToast();
+
+  // Function to get human-readable place name from coordinates
+  const getPlaceName = async (lat: number, lng: number): Promise<string> => {
+    try {
+      const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      return data.display_name || `${lat}, ${lng}`;
+    } catch (error) {
+      console.error("Error fetching place name:", error);
+      return `${lat}, ${lng}`; // Fallback to coordinates if API fails
+    }
+  };
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
@@ -69,6 +87,15 @@ export default function Profile() {
             setEditBio(data.bio || '');
             setEditPhone(data.contact?.phone || '');
             setEditLocation(data.contact?.location || '');
+
+            // Set display location if coordinates exist
+            if (data.contact?.location) {
+              const [lat, lng] = data.contact.location.split(',').map(Number);
+              if (!isNaN(lat) && !isNaN(lng)) {
+                const placeName = await getPlaceName(lat, lng);
+                setDisplayLocation(placeName);
+              }
+            }
           } else {
             // If user profile doesn't exist, create a basic one in Firestore
             const newProfileData = {
@@ -88,6 +115,7 @@ export default function Profile() {
             setEditBio('');
             setEditPhone('');
             setEditLocation('');
+            setDisplayLocation('');
           }
         } catch (err) {
           console.error("Error fetching user profile:", err);
@@ -119,6 +147,7 @@ export default function Profile() {
     setUploadingAvatar(true); // Start avatar upload loading
 
     let avatarUrl = userProfile?.avatar || "/placeholder.svg"; // Default to current or placeholder
+    let newDisplayLocation = userProfile?.contact?.displayLocation || '';
 
     if (editAvatarFile) {
       try {
@@ -162,6 +191,14 @@ export default function Profile() {
       }
     }
 
+    // Perform reverse geocoding if location coordinates are available
+    if (editLocation) {
+      const [lat, lng] = editLocation.split(',').map(Number);
+      if (!isNaN(lat) && !isNaN(lng)) {
+        newDisplayLocation = await getPlaceName(lat, lng);
+      }
+    }
+
     try {
       const userDocRef = doc(db, "users", auth.currentUser.uid);
       const updatedData = {
@@ -173,13 +210,15 @@ export default function Profile() {
         contact: {
           email: auth.currentUser.email, // Keep current user email
           phone: editPhone,
-          location: editLocation,
+          location: editLocation, // Save coordinates
+          displayLocation: newDisplayLocation, // Save human-readable address
         },
       };
       await updateDoc(userDocRef, updatedData);
 
       // Update local state to reflect changes
       setUserProfile(prev => prev ? { ...prev, ...updatedData, contact: { ...prev.contact, ...updatedData.contact } } : null);
+      setDisplayLocation(newDisplayLocation); // Update displayLocation state
 
       toast({
         title: "Success",
@@ -283,7 +322,7 @@ export default function Profile() {
                       Edit Profile
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="sm:max-w-lg w-full fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 p-6 border bg-background shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg md:w-full">
+                  <DialogContent className="sm:max-w-2xl w-full p-6 border bg-background shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg md:w-full">
                     <DialogHeader>
                       <DialogTitle>Edit Profile</DialogTitle>
                       <DialogDescription>
@@ -300,28 +339,33 @@ export default function Profile() {
                         <Input id="university" value={editUniversity} onChange={(e) => setEditUniversity(e.target.value)} />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="major">Major (Optional)</Label>
-                        <Input id="major" value={editMajor} onChange={(e) => setEditMajor(e.target.value)} />
+                        <Label htmlFor="major">Major</Label>
+                        <Input id="major" value={editMajor} onChange={(e) => setEditMajor(e.target.value)} required />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="bio">Bio (Optional)</Label>
-                        <Textarea id="bio" value={editBio} onChange={(e) => setEditBio(e.target.value)} rows={3} />
+                        <Label htmlFor="bio">Bio</Label>
+                        <Textarea id="bio" value={editBio} onChange={(e) => setEditBio(e.target.value)} rows={3} required />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="phone">Phone (Optional)</Label>
-                        <Input id="phone" value={editPhone} onChange={(e) => setEditPhone(e.target.value)} />
+                        <Label htmlFor="phone">Phone</Label>
+                        <Input id="phone" value={editPhone} onChange={(e) => setEditPhone(e.target.value)} required />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="location">Location (Optional)</Label>
-                        <Input id="location" value={editLocation} onChange={(e) => setEditLocation(e.target.value)} />
+                        <Label htmlFor="location">Location</Label>
+                        <LocationPickerMap 
+                          initialLocation={editLocation}
+                          onLocationSelect={setEditLocation}
+                        />
+                        {editLocation && <p className="text-sm text-muted-foreground mt-2">Selected: {editLocation}</p>}
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="avatar">Profile Image (Optional)</Label>
+                        <Label htmlFor="avatar">Profile Image</Label>
                         <Input 
                           id="avatar" 
                           type="file" 
                           accept="image/*"
                           onChange={(e) => setEditAvatarFile(e.target.files ? e.target.files[0] : null)}
+                          required
                         />
                         {editAvatarFile && <p className="text-sm text-muted-foreground">Selected: {editAvatarFile.name}</p>}
                       </div>
@@ -345,9 +389,9 @@ export default function Profile() {
                     <h2 className="text-2xl font-semibold">{userProfile.name}</h2>
                     <p className="text-gray-600">{userProfile.university} {userProfile.major && `- ${userProfile.major}`}</p>
                     <div className="flex items-center justify-center md:justify-start gap-2 mt-2">
-                      <Badge variant="secondary">Listings: {userProfile.listingsCount || 0}</Badge>
-                      <Badge variant="secondary">Reviews: {userProfile.reviewsCount || 0}</Badge>
-                      <Badge variant="secondary">Rating: {userProfile.rating || 0}</Badge>
+                      <Badge variant="secondary">Listings: {userProfile?.listingsCount || 0}</Badge>
+                      <Badge variant="secondary">Reviews: {userProfile?.reviewsCount || 0}</Badge>
+                      <Badge variant="secondary">Rating: {userProfile?.rating || 0}</Badge>
                     </div>
                     <p className="text-gray-700 mt-4 max-w-prose">{userProfile.bio || "No bio provided."}</p>
                   </div>
@@ -370,7 +414,7 @@ export default function Profile() {
                   </div>
                   <div className="flex items-center">
                     <MapPin className="h-5 w-5 text-gray-600 mr-3" />
-                    <p>{userProfile.contact?.location || "N/A"}</p>
+                    <p>{userProfile.contact?.displayLocation || "N/A"}</p>
                   </div>
                 </CardContent>
               </Card>

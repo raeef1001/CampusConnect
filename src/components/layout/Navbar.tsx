@@ -14,6 +14,7 @@ import { Bell, Search, Plus, MessageSquare, User, Settings, LogOut } from "lucid
 import { Badge } from "@/components/ui/badge";
 import { Link, useNavigate } from "react-router-dom";
 import { useUnreadNotificationsCount } from "@/hooks/useUnreadNotificationsCount"; // Import the new hook
+import { useUnreadMessagesCount } from "@/hooks/useUnreadMessagesCount"; // Import the new hook for messages
 import { useState, useEffect } from "react"; // Added useState, useEffect
 import { auth, db } from "@/lib/firebase"; // Import auth and db
 import { onAuthStateChanged } from "firebase/auth"; // Import onAuthStateChanged
@@ -34,7 +35,8 @@ interface UserProfile {
 
 export function Navbar({ isAuthenticated = false, onCreateListing, onLogout }: NavbarProps) {
   const navigate = useNavigate();
-  const { unreadCount } = useUnreadNotificationsCount(); // Use the hook to get unread count
+  const { unreadCount } = useUnreadNotificationsCount(); // Use the hook to get unread notifications count
+  const { unreadMessagesCount } = useUnreadMessagesCount(); // Use the hook to get unread messages count
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null); // State for user profile
   const [loadingUser, setLoadingUser] = useState(true); // Loading state for user profile
 
@@ -166,8 +168,13 @@ export function Navbar({ isAuthenticated = false, onCreateListing, onLogout }: N
             )}
           </Button>
 
-          <Button variant="ghost" size="icon" onClick={() => navigate('/messages')}>
+          <Button variant="ghost" size="icon" className="relative" onClick={() => navigate('/messages')}>
             <MessageSquare className="h-5 w-5" />
+            {unreadMessagesCount > 0 && (
+              <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs bg-primary-warm">
+                {unreadMessagesCount}
+              </Badge>
+            )}
           </Button>
 
           <DropdownMenu>
