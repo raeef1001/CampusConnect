@@ -304,41 +304,41 @@ export default function Landing() {
       {/* How It Works */}
       <section className="py-24 bg-gray-50">
         <div className="container">
-          <div className="text-center space-y-4 mb-16">
-            <Badge variant="secondary" className="bg-blue-100 text-blue-700 hover:bg-blue-100 px-4 py-1">
+          <div className="text-center mb-12">
+            <Badge variant="secondary" className="bg-blue-100 text-blue-700 px-4 py-1 font-semibold rounded-full tracking-wide">
               Getting Started
             </Badge>
-            <h2 className="text-3xl md:text-4xl font-bold">How CampusConnect Works</h2>
-            <p className="text-xl text-gray-700 max-w-2xl mx-auto font-medium drop-shadow-sm">
-              Our platform makes buying and selling on campus <span className="text-blue-700 font-bold">simple</span>, <span className="text-emerald-600 font-bold">safe</span>, and <span className="text-blue-500 font-bold">smart</span>.
+            <h2 className="text-3xl md:text-4xl font-extrabold mt-4 mb-2 text-blue-800 tracking-tight">How CampusConnect Works</h2>
+            <p className="text-base md:text-lg text-gray-600 max-w-xl mx-auto font-medium">
+              Buy, sell, and connect with your campus community in <span className="text-blue-700 font-semibold">three simple steps</span>.
             </p>
           </div>
-          <div className="relative flex flex-col md:flex-row md:justify-between md:items-stretch gap-y-12 gap-x-8 mt-12">
-            {/* Enhanced Connector line */}
-            <div className="hidden md:block absolute top-1/2 left-[12%] right-[12%] h-2 bg-gradient-to-r from-blue-400 via-blue-300 to-emerald-400 rounded-full opacity-80 shadow-lg -translate-y-1/2"></div>
+          <div className="relative flex flex-col md:flex-row md:justify-center md:items-stretch gap-8 md:gap-12">
+            {/* Connector line */}
+            <div className="hidden md:block absolute top-1/2 left-0 right-0 h-0.5 bg-gradient-to-r from-blue-200 via-blue-100 to-emerald-100 opacity-70 -z-10" style={{top:'60px'}}></div>
             {/* Step 1 */}
-            <div className="text-center relative flex flex-col items-center bg-white rounded-2xl shadow-lg px-6 py-10 z-10 border border-blue-100 hover:scale-105 transition-transform duration-300">
-              <div className="relative mx-auto w-20 h-20 bg-blue-600 rounded-full flex items-center justify-center mb-6 shadow-xl border-4 border-white">
-                <span className="text-4xl font-extrabold text-white drop-shadow-lg">1</span>
+            <div className="flex-1 min-w-[220px] max-w-xs mx-auto md:mx-0 bg-white rounded-xl shadow border border-gray-100 flex flex-col items-center px-6 py-8 transition-transform hover:scale-105">
+              <div className="w-14 h-14 flex items-center justify-center rounded-full bg-blue-600 text-white font-bold text-2xl mb-4 shadow">
+                1
               </div>
-              <h3 className="text-2xl font-bold mb-2 text-blue-700">Sign Up</h3>
-              <p className="text-gray-600 text-base md:text-lg max-w-xs mx-auto">Register with your university email to join your campus marketplace community.</p>
+              <h3 className="font-semibold text-lg mb-1 text-gray-900">Sign Up</h3>
+              <p className="text-gray-500 text-sm text-center">Register with your university email to join your campus marketplace community.</p>
             </div>
             {/* Step 2 */}
-            <div className="text-center relative flex flex-col items-center">
-              <div className="relative mx-auto w-20 h-20 bg-blue-600 rounded-full flex items-center justify-center mb-6 shadow-lg border-4 border-white">
-                <span className="text-3xl font-extrabold text-white drop-shadow">2</span>
+            <div className="flex-1 min-w-[220px] max-w-xs mx-auto md:mx-0 bg-white rounded-xl shadow border border-gray-100 flex flex-col items-center px-6 py-8 transition-transform hover:scale-105">
+              <div className="w-14 h-14 flex items-center justify-center rounded-full bg-blue-600 text-white font-bold text-2xl mb-4 shadow">
+                2
               </div>
-              <h3 className="text-2xl font-bold mb-2 text-blue-700">Browse or List</h3>
-              <p className="text-gray-600 text-base md:text-lg max-w-xs mx-auto">Find what you need or list items and services you want to offer to fellow students.</p>
+              <h3 className="font-semibold text-lg mb-1 text-gray-900">Browse or List</h3>
+              <p className="text-gray-500 text-sm text-center">Find what you need or list items and services you want to offer to fellow students.</p>
             </div>
             {/* Step 3 */}
-            <div className="text-center relative flex flex-col items-center">
-              <div className="relative mx-auto w-20 h-20 bg-blue-600 rounded-full flex items-center justify-center mb-6 shadow-lg border-4 border-white">
-                <span className="text-3xl font-extrabold text-white drop-shadow">3</span>
+            <div className="flex-1 min-w-[220px] max-w-xs mx-auto md:mx-0 bg-white rounded-xl shadow border border-gray-100 flex flex-col items-center px-6 py-8 transition-transform hover:scale-105">
+              <div className="w-14 h-14 flex items-center justify-center rounded-full bg-blue-600 text-white font-bold text-2xl mb-4 shadow">
+                3
               </div>
-              <h3 className="text-2xl font-bold mb-2 text-blue-700">Connect & Trade</h3>
-              <p className="text-gray-600 text-base md:text-lg max-w-xs mx-auto">Chat with verified students, arrange secure meetups, and complete your transaction.</p>
+              <h3 className="font-semibold text-lg mb-1 text-gray-900">Connect & Trade</h3>
+              <p className="text-gray-500 text-sm text-center">Chat with verified students, arrange secure meetups, and complete your transaction.</p>
             </div>
           </div>
         </div>
@@ -392,13 +392,13 @@ export default function Landing() {
         <div className="container text-center relative">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-96 bg-blue-500/40 rounded-full blur-3xl -z-10"></div>
           <div className="space-y-8 max-w-3xl mx-auto">
-            <Badge className="bg-white/30 text-white hover:bg-white/40 backdrop-blur px-4 py-1 text-base font-semibold tracking-wide shadow">
+           <Badge variant="secondary" className="bg-blue-100 text-blue-700 hover:bg-blue-100 px-4 py-1">
               Get Started Today
             </Badge>
-            <h2 className="text-4xl md:text-5xl font-extrabold text-white drop-shadow-lg">
+            <h2 className="text-4xl md:text-5xl font-extrabold drop-shadow-lg">
               Ready to Transform Your Campus Experience?
             </h2>
-            <p className="text-2xl text-blue-100 font-medium drop-shadow max-w-2xl mx-auto">
+            <p className="text-xl text-blue-400 font-medium drop-shadow max-w-2xl mx-auto">
               Join the community of students building a smarter, safer marketplace for campus commerce.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center mt-6">
@@ -415,7 +415,7 @@ export default function Landing() {
               <Button 
                 size="lg" 
                 variant="outline" 
-                className="text-lg px-10 py-6 border-white text-white font-semibold hover:bg-white/10 hover:text-white transition-all duration-300 focus:ring-2 focus:ring-white"
+                className="text-lg px-10 py-6 border-white  font-semibold hover:bg-white/10 hover:text-white transition-all duration-300 focus:ring-2 focus:ring-white"
                 onClick={() => {
                   document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' });
                 }}
