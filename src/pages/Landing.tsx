@@ -18,7 +18,22 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
+// Dummy authentication state for demo
+const isLoggedIn = localStorage.getItem("campusconnect-demo-auth") === "true";
+
+import { useNavigate } from "react-router-dom";
+
 export default function Landing() {
+  const navigate = useNavigate();
+  function handleDemoLogin() {
+    localStorage.setItem("campusconnect-demo-auth", "true");
+    navigate("/dashboard");
+  }
+
+  function handleDemoLogout() {
+    localStorage.removeItem("campusconnect-demo-auth");
+    navigate("/");
+  }
   const features = [
     {
       icon: Shield,
@@ -89,15 +104,14 @@ export default function Landing() {
       <div className="absolute top-0 w-full h-[500px] bg-gradient-to-br from-blue-600/5 via-transparent to-emerald-600/5 -z-10"></div>
       <div className="absolute top-0 w-full h-[800px] bg-[radial-gradient(ellipse_at_center,rgba(59,130,246,0.15),transparent_50%)] -z-10"></div>
 
-      <Navbar isAuthenticated={false} />
+      <Navbar isAuthenticated={isLoggedIn} onLogout={handleDemoLogout} />
       
-      {/* Hero Section */}
+      {/* Hero Section (with dummy login) */}
       <section className="container py-20 md:py-32">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           <div className="space-y-8 relative">
             <div className="absolute -top-16 -left-16 w-64 h-64 bg-blue-200/30 rounded-full blur-3xl -z-10"></div>
             <div className="absolute top-32 -right-10 w-40 h-40 bg-emerald-200/30 rounded-full blur-3xl -z-10"></div>
-            
             <div className="space-y-4">
               <Badge variant="secondary" className="bg-blue-100 text-blue-700 hover:bg-blue-100 px-4 py-1 text-sm">
                 🎓 For Students, By Students
@@ -109,17 +123,14 @@ export default function Landing() {
                 The exclusive AI-powered marketplace where university students buy, sell, and exchange with confidence. Verified identities, protected transactions.
               </p>
             </div>
-            
             <div className="flex flex-col sm:flex-row gap-4">
               <Button 
                 size="lg" 
                 className="bg-blue-600 hover:bg-blue-700 text-lg px-8 shadow-lg shadow-blue-600/20 transition-all duration-300 hover:translate-y-[-2px]"
-                asChild
+                onClick={handleDemoLogin}
               >
-                <Link to="/auth?tab=signup">
-                  Join Now with University Email
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </Link>
+                {isLoggedIn ? "Go to Dashboard" : "Demo Login (No Backend)"}
+                <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
               <Button 
                 variant="outline" 
@@ -129,10 +140,9 @@ export default function Landing() {
                   document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' });
                 }}
               >
-                Learn More
+                Explore Features
               </Button>
             </div>
-            
             <div className="flex flex-wrap items-center gap-6 text-sm text-gray-600">
               <div className="flex items-center space-x-2">
                 <CheckCircle className="h-4 w-4 text-green-500" />
@@ -148,75 +158,60 @@ export default function Landing() {
               </div>
             </div>
           </div>
-          
           <div className="relative">
             <div className="absolute -z-10 -top-10 -right-10 w-full h-full bg-gradient-to-br from-blue-400/10 to-emerald-400/10 rounded-2xl transform rotate-6 scale-105"></div>
-            <div className="relative z-10 bg-white/70 backdrop-blur-sm rounded-2xl shadow-2xl p-8 border border-white/20">
-              <div className="space-y-6">
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
-                    <span className="text-white font-bold">CC</span>
-                  </div>
-                  <div>
-                    <h3 className="font-semibold">Welcome to CampusConnect!</h3>
-                    <p className="text-sm text-gray-600">The smarter way to trade on campus</p>
-                  </div>
+            <div className="relative z-10 bg-white/70 backdrop-blur-sm rounded-2xl shadow-2xl p-8 border border-white/20 flex flex-col items-center justify-center min-h-[320px]">
+              <div className="flex flex-col items-center space-y-2">
+                <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+                  <span className="text-white font-bold">CC</span>
                 </div>
-                
-                <div className="space-y-4">
-                  <Card className="border-l-4 border-l-blue-500 transition-all duration-200 hover:shadow-md">
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h4 className="font-medium">MacBook Pro 2021</h4>
-                          <p className="text-sm text-gray-600">Like New • Electronics</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-bold text-blue-600">$1,200</p>
-                          <p className="text-xs text-green-600">AI Suggested: $1,150-$1,250</p>
-                        </div>
+                <h3 className="font-semibold text-gray-800">Welcome to CampusConnect!</h3>
+                <p className="text-sm text-gray-500">The smarter way to trade on campus</p>
+              </div>
+              <div className="mt-6 w-full space-y-3">
+                <Card className="border-l-4 border-l-blue-500">
+                  <CardContent className="p-4 flex items-center justify-between">
+                    <div>
+                      <h4 className="font-medium">MacBook Pro 2021</h4>
+                      <p className="text-sm text-gray-500">Like New • Electronics</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold text-blue-600">$1,200</p>
+                      <p className="text-xs text-green-600">AI Suggested: $1,150-$1,250</p>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4 flex items-center justify-between">
+                    <div>
+                      <h4 className="font-medium">Math Tutoring</h4>
+                      <p className="text-sm text-gray-500">Service • Academic</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold text-emerald-600">$15/hr</p>
+                      <div className="flex items-center space-x-1">
+                        <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                        <span className="text-xs">4.9 (23 reviews)</span>
                       </div>
-                    </CardContent>
-                  </Card>
-                  
-                  <Card className="transition-all duration-200 hover:shadow-md">
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h4 className="font-medium">Math Tutoring</h4>
-                          <p className="text-sm text-gray-600">Service • Academic</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-bold text-emerald-600">$15/hr</p>
-                          <div className="flex items-center space-x-1">
-                            <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                            <span className="text-xs">4.9 (23 reviews)</span>
-                          </div>
-                        </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4 flex items-center justify-between">
+                    <div>
+                      <h4 className="font-medium">Course Materials Bundle</h4>
+                      <p className="text-sm text-gray-500">Good • Textbooks</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold text-blue-600">$85</p>
+                      <div className="flex items-center space-x-1">
+                        <span className="text-xs text-emerald-600">3 Interested Buyers</span>
                       </div>
-                    </CardContent>
-                  </Card>
-                  
-                  <Card className="transition-all duration-200 hover:shadow-md">
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h4 className="font-medium">Course Materials Bundle</h4>
-                          <p className="text-sm text-gray-600">Good • Textbooks</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-bold text-blue-600">$85</p>
-                          <div className="flex items-center space-x-1">
-                            <span className="text-xs text-emerald-600">3 Interested Buyers</span>
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
             </div>
-            
             {/* Decorative elements */}
             <div className="absolute -bottom-10 -right-10 w-20 h-20 bg-blue-400/20 rounded-full blur-2xl"></div>
             <div className="absolute -top-6 right-20 w-12 h-12 bg-emerald-400/30 rounded-full blur-xl"></div>
@@ -395,7 +390,7 @@ export default function Landing() {
            <Badge variant="secondary" className="bg-blue-100 text-blue-700 hover:bg-blue-100 px-4 py-1">
               Get Started Today
             </Badge>
-            <h2 className="text-4xl md:text-5xl font-extrabold drop-shadow-lg">
+            <h2 className="text-3xl md:text-5xl font-extrabold drop-shadow-lg">
               Ready to Transform Your Campus Experience?
             </h2>
             <p className="text-xl text-blue-400 font-medium drop-shadow max-w-2xl mx-auto">
@@ -415,7 +410,7 @@ export default function Landing() {
               <Button 
                 size="lg" 
                 variant="outline" 
-                className="text-lg px-10 py-6 border-white  font-semibold hover:bg-white/10 hover:text-white transition-all duration-300 focus:ring-2 focus:ring-white"
+                className="text-lg px-10 py-6 border-white  font-semibold hover:bg-blue/10 hover:text-black transition-all duration-300 focus:ring-2 focus:ring-white"
                 onClick={() => {
                   document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' });
                 }}

@@ -13,6 +13,7 @@ import { format } from "date-fns";
 import { Calendar as CalendarIcon, Eye, EyeOff, ArrowLeft, Shield, Mail } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { login, signup } from "@/utils/auth"; // Import both login and signup functions
 
 export default function Auth() {
   const [showPassword, setShowPassword] = useState(false);
@@ -37,30 +38,26 @@ export default function Auth() {
     setActiveTab("signup");
   };
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     
-    // Simulate API call delay
-    setTimeout(() => {
-      if (loginEmail && loginPassword) {
-        // For demo purposes, any email and password will work
-        toast.success("Login successful!");
-        // Store something in localStorage to simulate being logged in
-        localStorage.setItem("campusconnect-user", JSON.stringify({ 
-          email: loginEmail, 
-          name: "Demo User",
-          isLoggedIn: true
-        }));
-        navigate("/dashboard");
+    try {
+      await login(loginEmail, loginPassword);
+      toast.success("Login successful!");
+      navigate("/dashboard");
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        toast.error(error.message);
       } else {
-        toast.error("Please fill all required fields");
+        toast.error("Login failed. An unknown error occurred.");
       }
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
-  const handleSignup = (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
@@ -83,18 +80,19 @@ export default function Auth() {
       return;
     }
 
-    // Simulate API call delay
-    setTimeout(() => {
+    try {
+      await signup(signupEmail, signupPassword);
       toast.success("Account created successfully!");
-      // Store user info in localStorage
-      localStorage.setItem("campusconnect-user", JSON.stringify({ 
-        email: signupEmail,
-        name: fullName,
-        isLoggedIn: true
-      }));
       navigate("/dashboard");
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        toast.error(error.message);
+      } else {
+        toast.error("Account creation failed. An unknown error occurred.");
+      }
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
   return (

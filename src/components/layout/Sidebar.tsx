@@ -11,10 +11,12 @@ import {
   Shield, 
   LogOut,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Bell // Added Bell import
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useState } from "react";
+import { Link, useLocation } from "react-router-dom"; // Import Link and useLocation
 
 interface SidebarProps {
   className?: string;
@@ -23,10 +25,12 @@ interface SidebarProps {
 }
 
 const menuItems = [
-  { icon: Home, label: "Dashboard", href: "/dashboard", active: true },
+  { icon: Home, label: "Dashboard", href: "/dashboard" },
   { icon: Package, label: "My Listings", href: "/listings" },
   { icon: MessageSquare, label: "Messages", href: "/messages", badge: 2 },
   { icon: User, label: "Profile", href: "/profile" },
+  { icon: Bell, label: "Notifications", href: "/notifications", badge: 3 }, // Added Notifications
+  { icon: Settings, label: "Settings", href: "/settings" }, // Added Settings
 ];
 
 const adminItems = [
@@ -35,6 +39,7 @@ const adminItems = [
 
 export function Sidebar({ className, isCollapsed = false, onToggle }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(isCollapsed);
+  const location = useLocation(); // Get current location
 
   const handleToggle = () => {
     setCollapsed(!collapsed);
@@ -43,25 +48,25 @@ export function Sidebar({ className, isCollapsed = false, onToggle }: SidebarPro
 
   return (
     <div className={cn(
-      "flex flex-col border-r bg-gray-50/40",
+      "flex flex-col border-r bg-sidebar-background",
       collapsed ? "w-16" : "w-64",
       "transition-all duration-300 ease-in-out",
       className
     )}>
-      <div className="flex h-16 items-center justify-between px-4 border-b">
+      <div className="flex h-16 items-center justify-between px-4 border-b border-sidebar-border">
         {!collapsed && (
           <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">CC</span>
+            <div className="w-8 h-8 bg-primary-warm rounded-lg flex items-center justify-center">
+              <span className="text-primary-warm-foreground font-bold text-sm">CC</span>
             </div>
-            <span className="font-semibold">CampusConnect</span>
+            <span className="font-semibold text-sidebar-foreground">CampusConnect</span>
           </div>
         )}
         <Button
           variant="ghost"
           size="icon"
           onClick={handleToggle}
-          className="h-8 w-8"
+          className="h-8 w-8 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
         >
           {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
         </Button>
@@ -73,33 +78,33 @@ export function Sidebar({ className, isCollapsed = false, onToggle }: SidebarPro
             {menuItems.map((item) => (
               <Button
                 key={item.href}
-                variant={item.active ? "secondary" : "ghost"}
+                variant={location.pathname === item.href ? "sidebar-primary" : "ghost"} // Set active based on current path
                 className={cn(
-                  "w-full justify-start",
+                  "w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                   collapsed && "px-2"
                 )}
                 asChild
               >
-                <a href={item.href}>
+                <Link to={item.href}> {/* Use Link component */}
                   <item.icon className="h-4 w-4" />
                   {!collapsed && (
                     <>
                       <span className="ml-2">{item.label}</span>
                       {item.badge && (
-                        <span className="ml-auto bg-blue-500 text-white text-xs rounded-full px-2 py-0.5">
+                        <span className="ml-auto bg-warm-500 text-primary-warm-foreground text-xs rounded-full px-2 py-0.5">
                           {item.badge}
                         </span>
                       )}
                     </>
                   )}
-                </a>
+                </Link>
               </Button>
             ))}
           </div>
 
           {!collapsed && (
             <div className="pt-4">
-              <p className="px-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <p className="px-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 Admin
               </p>
               <div className="space-y-1 mt-2">
@@ -107,13 +112,13 @@ export function Sidebar({ className, isCollapsed = false, onToggle }: SidebarPro
                   <Button
                     key={item.href}
                     variant="ghost"
-                    className="w-full justify-start"
+                    className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                     asChild
                   >
-                    <a href={item.href}>
+                    <Link to={item.href}> {/* Use Link component */}
                       <item.icon className="h-4 w-4" />
                       <span className="ml-2">{item.label}</span>
-                    </a>
+                    </Link>
                   </Button>
                 ))}
               </div>
@@ -122,7 +127,7 @@ export function Sidebar({ className, isCollapsed = false, onToggle }: SidebarPro
         </div>
       </ScrollArea>
 
-      <div className="border-t p-4">
+      <div className="border-t border-sidebar-border p-4">
         <div className={cn(
           "flex items-center",
           collapsed ? "justify-center" : "space-x-3"
@@ -133,19 +138,16 @@ export function Sidebar({ className, isCollapsed = false, onToggle }: SidebarPro
           </Avatar>
           {!collapsed && (
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">John Doe</p>
-              <p className="text-xs text-gray-500 truncate">Computer Science</p>
+              <p className="text-sm font-medium truncate text-sidebar-foreground">John Doe</p>
+              <p className="text-xs text-muted-foreground truncate">Computer Science</p>
             </div>
           )}
         </div>
         
         {!collapsed && (
           <div className="mt-3 space-y-1">
-            <Button variant="ghost" size="sm" className="w-full justify-start">
-              <Settings className="h-4 w-4 mr-2" />
-              Settings
-            </Button>
-            <Button variant="ghost" size="sm" className="w-full justify-start text-red-600 hover:text-red-700">
+            {/* Removed duplicate Settings button as it's now in menuItems */}
+            <Button variant="ghost" size="sm" className="w-full justify-start text-destructive hover:text-destructive-foreground">
               <LogOut className="h-4 w-4 mr-2" />
               Logout
             </Button>
