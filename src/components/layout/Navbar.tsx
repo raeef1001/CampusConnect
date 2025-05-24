@@ -10,16 +10,17 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { Bell, Search, Plus, MessageSquare, User, Settings, LogOut } from "lucide-react";
+import { Bell, Search, Plus, MessageSquare, User, Settings, LogOut, ShoppingCart } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Link, useNavigate } from "react-router-dom";
-import { useUnreadNotificationsCount } from "@/hooks/useUnreadNotificationsCount"; // Import the new hook
-import { useUnreadMessagesCount } from "@/hooks/useUnreadMessagesCount"; // Import the new hook for messages
+import { useUnreadNotificationsCount } from "@/hooks/useUnreadNotificationsCount";
+import { useUnreadMessagesCount } from "@/hooks/useUnreadMessagesCount";
 import { useState, useEffect } from "react";
 import { auth, db } from "@/lib/firebase";
-import { onAuthStateChanged } from "firebase/auth"; // Import onAuthStateChanged
-import { doc, getDoc } from "firebase/firestore"; // Import doc, getDoc
-import { Skeleton } from "@/components/ui/skeleton"; // Import Skeleton for loading state
+import { onAuthStateChanged } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useCart } from "@/context/CartContext"; // Import useCart hook
 
 interface NavbarProps {
   isAuthenticated?: boolean;
@@ -37,9 +38,10 @@ export function Navbar({ isAuthenticated = false, onCreateListing, onLogout }: N
   const navigate = useNavigate();
   const { unreadCount } = useUnreadNotificationsCount();
   const { unreadMessagesCount } = useUnreadMessagesCount();
+  const { cartItems } = useCart(); // Use cart context
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loadingUser, setLoadingUser] = useState(true);
-  const [searchQuery, setSearchQuery] = useState(""); // State for search input
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -181,6 +183,16 @@ export function Navbar({ isAuthenticated = false, onCreateListing, onLogout }: N
             {unreadMessagesCount > 0 && (
               <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs bg-primary-warm">
                 {unreadMessagesCount}
+              </Badge>
+            )}
+          </Button>
+
+          {/* Cart Button */}
+          <Button variant="ghost" size="icon" className="relative" onClick={() => navigate('/cart')}>
+            <ShoppingCart className="h-5 w-5" />
+            {cartItems.length > 0 && (
+              <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs bg-primary-warm">
+                {cartItems.length}
               </Badge>
             )}
           </Button>
