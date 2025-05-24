@@ -17,13 +17,6 @@ import { collection, addDoc, serverTimestamp, doc, getDoc } from 'firebase/fires
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useToast } from '@/components/ui/use-toast';
 import { ImageAnalysisResult } from '@/lib/gemini';
-import { v2 as cloudinary } from 'cloudinary';
-
-cloudinary.config({ 
-  cloud_name: import.meta.env.VITE_CLOUDINARY_CLOUD_NAME, 
-  api_key: import.meta.env.VITE_CLOUDINARY_API_KEY, 
-  api_secret: import.meta.env.VITE_CLOUDINARY_API_SECRET
-});
 
 export default function CreateListing() {
   const navigate = useNavigate();
@@ -85,19 +78,30 @@ export default function CreateListing() {
     if (imageFile) {
       try {
         // Convert File to base64 string for Cloudinary upload
-        const reader = new FileReader();
-        reader.readAsDataURL(imageFile);
-        await new Promise<void>((resolve) => {
-          reader.onloadend = async () => {
-            const base64data = reader.result as string;
-            const uploadResult = await cloudinary.uploader.upload(base64data, {
-              folder: `listing_images/${user.uid}`, // Optional: organize uploads in folders
-              public_id: imageFile.name.split('.')[0], // Use original file name as public_id
-            });
-            imageUrl = uploadResult.secure_url;
-            resolve();
-          };
+        const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+        const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET; // Assuming an upload preset is configured for unsigned uploads
+
+        if (!cloudName || !uploadPreset) {
+          throw new Error("Cloudinary configuration missing. Please ensure VITE_CLOUDINARY_CLOUD_NAME and VITE_CLOUDINARY_UPLOAD_PRESET are set in your .env file.");
+        }
+
+        const formData = new FormData();
+        formData.append('file', imageFile);
+        formData.append('upload_preset', uploadPreset);
+        formData.append('folder', `listing_images/${user.uid}`); // Optional: organize uploads in folders
+        formData.append('public_id', imageFile.name.split('.')[0]); // Use original file name as public_id
+
+        const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+          method: 'POST',
+          body: formData,
         });
+
+        if (!response.ok) {
+          throw new Error(`Cloudinary upload failed: ${response.statusText}`);
+        }
+
+        const uploadResult = await response.json();
+        imageUrl = uploadResult.secure_url;
       } catch (error) {
         console.error("Error uploading image to Cloudinary: ", error);
         toast({
