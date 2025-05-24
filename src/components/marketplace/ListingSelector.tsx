@@ -118,7 +118,7 @@ export const ListingSelector: React.FC<ListingSelectorProps> = ({
                     }`}
                     onClick={() => setSelectedListingInternal(listing)}
                   >
-                    <ListingCard {...listing} hideSellerInfo={true} /> {/* Pass hideSellerInfo */}
+                     {/* Pass hideSellerInfo */}
                   </div>
                 ))}
               </div>
