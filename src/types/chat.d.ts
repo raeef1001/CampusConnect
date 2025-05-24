@@ -7,8 +7,11 @@ export interface Chat {
   createdAt: Timestamp | FieldValue;
   updatedAt?: Timestamp | FieldValue;
   listingId?: string; 
+<<<<<<< HEAD
+=======
   // Encryption field for last message
   encryptedLastMessage?: string;
+>>>>>>> f4fe690e00dd5322027e4ca7da1a28e707a1b779
 }
 
 export interface Message {
@@ -21,10 +24,13 @@ export interface Message {
   cartId?: string;
   paymentStatus?: 'pending' | 'completed' | 'failed';
   createdAt: Timestamp | FieldValue;
+<<<<<<< HEAD
+=======
   // Encryption fields
   encrypted?: boolean;
   encryptedText?: string;
   encryptedImage?: string;
+>>>>>>> f4fe690e00dd5322027e4ca7da1a28e707a1b779
 }
 
 export interface UserProfile {

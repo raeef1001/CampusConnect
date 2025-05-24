@@ -2,11 +2,16 @@ import { auth } from '../lib/firebase';
 import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
+<<<<<<< HEAD
+  createUserWithEmailAndPassword, // Add this import
+  signOut,
+=======
   createUserWithEmailAndPassword,
   signOut,
   signInWithPopup,
   GoogleAuthProvider,
   GithubAuthProvider,
+>>>>>>> f4fe690e00dd5322027e4ca7da1a28e707a1b779
   User,
 } from 'firebase/auth';
 
@@ -66,6 +71,8 @@ export const logout = async () => {
     }
     throw error;
   }
+<<<<<<< HEAD
+=======
 };
 
 // Google OAuth login
@@ -123,4 +130,5 @@ export const signInWithGitHub = async () => {
     }
     throw error;
   }
+>>>>>>> f4fe690e00dd5322027e4ca7da1a28e707a1b779
 };
