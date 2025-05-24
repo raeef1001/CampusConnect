@@ -20,6 +20,7 @@ import { Skeleton } from "@/components/ui/skeleton"; // Added Skeleton import
 import { useState, useEffect } from "react"; // Added useEffect
 import { Link, useLocation } from "react-router-dom";
 import { useUnreadNotificationsCount } from "@/hooks/useUnreadNotificationsCount"; // Import the new hook
+import { useUnreadMessagesCount } from "@/hooks/useUnreadMessagesCount"; // Import the new hook for messages
 import { auth, db } from "@/lib/firebase"; // Import auth and db
 import { onAuthStateChanged } from "firebase/auth"; // Import onAuthStateChanged
 import { doc, getDoc } from "firebase/firestore"; // Import doc, getDoc
@@ -37,13 +38,13 @@ interface MenuItem {
   badge?: number;
 }
 
-const menuItems = (unreadCount: number): MenuItem[] => [ // Use unreadCount from hook
+const menuItems = (unreadNotificationsCount: number, unreadMessagesCount: number): MenuItem[] => [ // Use unread counts from hooks
   { icon: Home, label: "Dashboard", href: "/dashboard" },
   { icon: Package, label: "All Listings", href: "/listings" },
   { icon: Package, label: "My Listings", href: "/listings?filter=my-listings" },
   { icon: Bookmark, label: "Bookmarked Products", href: "/listings?filter=bookmarked-listings" },
-  { icon: MessageSquare, label: "Messages", href: "/messages", badge: 2 },
-  { icon: Bell, label: "Notifications", href: "/notifications", badge: unreadCount > 0 ? unreadCount : undefined }, // Use dynamic count
+  { icon: MessageSquare, label: "Messages", href: "/messages", badge: unreadMessagesCount > 0 ? unreadMessagesCount : undefined },
+  { icon: Bell, label: "Notifications", href: "/notifications", badge: unreadNotificationsCount > 0 ? unreadNotificationsCount : undefined }, // Use dynamic count
   { icon: User, label: "Profile", href: "/profile" },
   { icon: Settings, label: "Settings", href: "/settings" },
 ];
@@ -64,7 +65,8 @@ export function Sidebar({ className, isCollapsed = false, onToggle }: SidebarPro
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null); // State for user profile
   const [loadingUser, setLoadingUser] = useState(true); // Loading state for user profile
   const location = useLocation();
-  const { unreadCount } = useUnreadNotificationsCount(); // Use the hook to get unread count
+  const { unreadCount: unreadNotificationsCount } = useUnreadNotificationsCount(); // Use the hook to get unread notifications count
+  const { unreadMessagesCount } = useUnreadMessagesCount(); // Use the hook to get unread messages count
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -130,7 +132,7 @@ export function Sidebar({ className, isCollapsed = false, onToggle }: SidebarPro
       <ScrollArea className="flex-1 px-3">
         <div className="space-y-2 py-4">
           <div className="space-y-1">
-            {menuItems(unreadCount).map((item: MenuItem) => (
+            {menuItems(unreadNotificationsCount, unreadMessagesCount).map((item: MenuItem) => (
               <Button
                 key={item.href}
                 variant={location.pathname === item.href ? "sidebar-primary" : "ghost"}

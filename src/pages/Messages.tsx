@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Navbar } from "@/components/layout/Navbar";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { FloatingChat } from "@/components/ui/floating-chat";
-import { useLocation } from "react-router-dom";
+import { useLocation, useParams } from "react-router-dom";
 import { auth, db, storage } from "@/lib/firebase"; // Import storage
 import { collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, getDocs, doc, getDoc, updateDoc, Timestamp, FieldValue } from "firebase/firestore"; // Import Timestamp, FieldValue
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage"; // Import storage functions
@@ -63,6 +63,7 @@ export default function Messages() {
   const [isListingSelectorOpen, setIsListingSelectorOpen] = useState(false); // State for listing selector modal
 
   const location = useLocation();
+  const { chatId } = useParams<{ chatId: string }>(); // Extract chatId from URL
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null); // Ref for file input
 
@@ -131,36 +132,45 @@ export default function Messages() {
           });
           await fetchUserProfiles(Array.from(allParticipantUids));
 
-          // Handle direct message initiation from ListingCard/Details
+          // Handle direct message initiation from URL (chatId) or ListingCard/Details (sellerId, listingId)
           const { sellerId, listingId } = location.state || {};
-          if (sellerId && listingId && user.uid !== sellerId) {
+          let chatToSelect: Chat | null = null;
+
+          if (chatId) {
+            // Prioritize chat ID from URL
+            chatToSelect = fetchedChats.find(chat => chat.id === chatId) || null;
+          } else if (sellerId && listingId && user.uid !== sellerId) {
+            // Fallback to direct message initiation from ListingCard/Details
             const existingChat = fetchedChats.find(chat =>
               chat.participants.includes(sellerId) && chat.participants.includes(user.uid)
             );
 
             if (existingChat) {
-              setSelectedChat(existingChat);
+              chatToSelect = existingChat;
             } else {
-              // Create new chat
+              // Create new chat if it doesn't exist
               const newChatRef = await addDoc(collection(db, "chats"), {
                 participants: [user.uid, sellerId],
                 createdAt: serverTimestamp(),
                 updatedAt: serverTimestamp(),
                 listingId: listingId, // Associate chat with a listing
               });
-              const newChat: Chat = {
+              chatToSelect = {
                 id: newChatRef.id,
                 participants: [user.uid, sellerId],
                 createdAt: serverTimestamp(),
                 updatedAt: serverTimestamp(),
-              };
-              setChats(prev => [newChat, ...prev]);
-              setSelectedChat(newChat);
+              } as Chat; // Cast to Chat
+              setChats(prev => [chatToSelect!, ...prev]); // Add new chat to state
             }
             // Clear state to prevent re-creation on subsequent visits
-            window.history.replaceState({}, document.title); 
+            window.history.replaceState({}, document.title);
+          }
+
+          if (chatToSelect) {
+            setSelectedChat(chatToSelect);
           } else if (!selectedChat && fetchedChats.length > 0) {
-            // If no specific chat requested, select the most recent one
+            // If no specific chat requested and no chat selected, select the most recent one
             setSelectedChat(fetchedChats[0]);
           }
         }, (error) => {
@@ -179,7 +189,7 @@ export default function Messages() {
     });
 
     return () => unsubscribeAuth();
-  }, [location.state, selectedChat]); // Added selectedChat to dependencies
+  }, [location.state, selectedChat, chatId]); // Added chatId to dependencies
 
   useEffect(() => {
     if (selectedChat) {

@@ -278,28 +278,6 @@ export default function Dashboard() {
           
           {/* Main Content */}
           <main className="flex-1 p-6 overflow-auto">
-            {/* New header for search, create, notifications */}
-            <div className="flex justify-end items-center gap-4 mb-6">
-              <div className="relative w-full md:w-auto">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input 
-                  placeholder="Search listings..." 
-                  className="pl-10 w-full md:w-[250px] bg-card"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-              
-              <Button onClick={() => navigate('/create-listing')} className="bg-primary-warm hover:bg-warm-600 gap-2 whitespace-nowrap">
-                <Plus className="h-4 w-4" />
-                Create Listing
-              </Button>
-              
-              <Button variant="outline" size="icon" className="relative" onClick={() => navigate('/notifications')}>
-                <Bell className="h-5 w-5" />
-                <span className="absolute -top-1 -right-1 w-5 h-5 bg-warm-500 rounded-full text-primary-warm-foreground text-xs flex items-center justify-center">3</span>
-              </Button>
-            </div>
 
             <div className="mb-8">
               <div className="mb-6">

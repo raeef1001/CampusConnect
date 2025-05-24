@@ -136,7 +136,7 @@ const AnimatedRoutes = ({ isAuthenticated }: AnimatedRoutesProps) => {
             {isAuthenticated ? <Notifications /> : <Navigate to="/auth" />}
           </motion.div>
         } />
-        <Route path="/messages" element={
+        <Route path="/messages/:chatId?" element={
           <motion.div
             key="messages"
             initial="initial"
