@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +12,8 @@ import { format } from "date-fns";
 import { Calendar as CalendarIcon, Eye, EyeOff, ArrowLeft, Shield, Mail } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { app, analytics } from "@/lib/firebase";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
 
 export default function Auth() {
   const [showPassword, setShowPassword] = useState(false);
@@ -20,6 +21,7 @@ export default function Auth() {
   const [date, setDate] = useState<Date>();
   const [activeTab, setActiveTab] = useState<"login" | "signup">("login");
   const navigate = useNavigate();
+  const auth = getAuth(app);
   
   // Form states
   const [loginEmail, setLoginEmail] = useState("");
@@ -37,30 +39,22 @@ export default function Auth() {
     setActiveTab("signup");
   };
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     
-    // Simulate API call delay
-    setTimeout(() => {
-      if (loginEmail && loginPassword) {
-        // For demo purposes, any email and password will work
-        toast.success("Login successful!");
-        // Store something in localStorage to simulate being logged in
-        localStorage.setItem("campusconnect-user", JSON.stringify({ 
-          email: loginEmail, 
-          name: "Demo User",
-          isLoggedIn: true
-        }));
-        navigate("/dashboard");
-      } else {
-        toast.error("Please fill all required fields");
-      }
+    try {
+      await signInWithEmailAndPassword(auth, loginEmail, loginPassword);
+      toast.success("Login successful!");
+      navigate("/dashboard");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to login. Please check your credentials.");
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
-  const handleSignup = (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
@@ -83,18 +77,18 @@ export default function Auth() {
       return;
     }
 
-    // Simulate API call delay
-    setTimeout(() => {
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, signupEmail, signupPassword);
+      // You can access the user object via userCredential.user
+      // Here you could store additional user information (fullName, phoneNumber, date) to Firestore or Realtime Database
+      // For example: await setDoc(doc(db, "users", userCredential.user.uid), { fullName, email: signupEmail, phoneNumber, dateOfBirth: date });
       toast.success("Account created successfully!");
-      // Store user info in localStorage
-      localStorage.setItem("campusconnect-user", JSON.stringify({ 
-        email: signupEmail,
-        name: fullName,
-        isLoggedIn: true
-      }));
       navigate("/dashboard");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to create account. Please try again.");
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
   return (
