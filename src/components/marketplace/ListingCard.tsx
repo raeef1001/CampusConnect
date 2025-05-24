@@ -2,7 +2,7 @@ import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Heart, MessageSquare, MapPin, Star } from "lucide-react";
+import { Heart, MessageSquare, MapPin, Star, Truck } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { Link, useNavigate } from "react-router-dom";
@@ -11,12 +11,21 @@ import { collection, addDoc, deleteDoc, query, where, getDocs, doc, getDoc, serv
 import { useToast } from "@/components/ui/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { addNotification } from "@/utils/notifications"; // Import addNotification utility
+import { getLocationName } from "@/utils/geocoding";
 
 interface SellerProfile {
   name: string;
   avatar?: string;
   university: string;
   rating: number;
+}
+
+interface LocationData {
+  id: string;
+  lat: number;
+  lng: number;
+  type: 'main' | 'delivery';
+  name?: string;
 }
 
 interface ListingCardProps {
@@ -35,6 +44,10 @@ interface ListingCardProps {
   };
   category: string;
   isService?: boolean;
+  locations?: LocationData[];
+  deliveryRadius?: number;
+  isAvailable?: boolean;
+  availabilityStatus?: 'available' | 'sold' | 'reserved' | 'unavailable';
 }
 
 export function ListingCard({ 
@@ -46,7 +59,11 @@ export function ListingCard({
   image, 
   seller, // Seller prop is now expected to be complete
   category, 
-  isService = false 
+  isService = false,
+  locations = [],
+  deliveryRadius = 0,
+  isAvailable = true,
+  availabilityStatus = 'available'
 }: ListingCardProps) {
   const [isFavorited, setIsFavorited] = useState(false);
   const { toast } = useToast();
@@ -176,10 +193,28 @@ export function ListingCard({
             >
               <Heart className={`h-4 w-4 ${isFavorited ? "fill-current" : ""}`} />
             </Button>
-            <div className="absolute top-3 left-3">
+            <div className="absolute top-3 left-3 space-y-1">
               <Badge variant="secondary" className="bg-background/90 backdrop-blur-sm font-medium">
                 {category}
               </Badge>
+              {/* Availability Status Badge */}
+              {!isAvailable || availabilityStatus !== 'available' && (
+                <div>
+                  <Badge 
+                    variant={availabilityStatus === 'sold' ? 'destructive' : 'outline'} 
+                    className={cn(
+                      "bg-background/90 backdrop-blur-sm font-medium text-xs",
+                      availabilityStatus === 'sold' && "bg-red-500 text-white",
+                      availabilityStatus === 'reserved' && "bg-yellow-500 text-white",
+                      availabilityStatus === 'unavailable' && "bg-gray-500 text-white"
+                    )}
+                  >
+                    {availabilityStatus === 'sold' && 'SOLD'}
+                    {availabilityStatus === 'reserved' && 'RESERVED'}
+                    {availabilityStatus === 'unavailable' && 'UNAVAILABLE'}
+                  </Badge>
+                </div>
+              )}
             </div>
           </div>
           
@@ -207,6 +242,24 @@ export function ListingCard({
               <p className="text-sm text-muted-foreground line-clamp-2 mb-3 min-h-[2.5rem]"> {/* Added min-h for consistent description height */}
                 {description}
               </p>
+
+              {/* Location and Delivery Information */}
+              {locations.length > 0 && (
+                <div className="mb-3 space-y-1">
+                  {locations.find(loc => loc.type === 'main') && (
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <MapPin className="h-3 w-3 text-blue-600" />
+                      <span>Main location set</span>
+                    </div>
+                  )}
+                  {locations.filter(loc => loc.type === 'delivery').length > 0 && deliveryRadius > 0 && (
+                    <div className="flex items-center gap-1 text-xs text-green-600">
+                      <Truck className="h-3 w-3" />
+                      <span>Delivery available ({deliveryRadius}km radius)</span>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
             
             <div className="flex items-center justify-between mt-auto"> {/* Added mt-auto to push to bottom */}

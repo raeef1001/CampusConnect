@@ -10,8 +10,9 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { FloatingChat } from "@/components/ui/floating-chat";
 import { PriceAdvisor } from "@/components/ui/price-advisor";
 import { ImageAnalyzer } from "@/components/ui/image-analyzer";
+import MultiLocationPickerMap, { LocationData } from "@/components/MultiLocationPickerMap";
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, Sparkles } from 'lucide-react';
+import { ChevronLeft, Sparkles, MapPin } from 'lucide-react';
 import { db, auth, storage } from '@/lib/firebase';
 import { collection, addDoc, serverTimestamp, doc, getDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -29,6 +30,8 @@ export default function CreateListing() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [aiAnalyzed, setAiAnalyzed] = useState(false);
+  const [locations, setLocations] = useState<LocationData[]>([]);
+  const [deliveryRadius, setDeliveryRadius] = useState<number>(5);
 
   const { toast } = useToast();
 
@@ -144,6 +147,12 @@ export default function CreateListing() {
       // Continue without profile if there's an error
     }
 
+    // Generate location string for backward compatibility
+    const mainLocation = locations.find(loc => loc.type === 'main');
+    const locationString = mainLocation 
+      ? `${mainLocation.lat.toFixed(6)},${mainLocation.lng.toFixed(6)}`
+      : "";
+
     try {
       await addDoc(collection(db, "listings"), {
         title,
@@ -152,6 +161,11 @@ export default function CreateListing() {
         category,
         condition,
         imageUrl, // Use the uploaded image URL
+        location: locationString, // Keep for backward compatibility
+        locations: locations, // New multi-location support
+        deliveryRadius: deliveryRadius, // Delivery radius in kilometers
+        isAvailable: true, // New listings are available by default
+        availabilityStatus: 'available', // Default availability status
         userId: user.uid, // Keep userId at top level for easy querying
         userEmail: user.email, // Keep userEmail at top level
         seller: sellerProfile, // Add the complete seller profile
@@ -339,6 +353,40 @@ export default function CreateListing() {
                           {aiAnalyzed && (
                             <p className="text-xs text-purple-600">✨ AI assessed condition</p>
                           )}
+                        </div>
+
+                        {/* Delivery Radius Setting */}
+                        <div className="space-y-2">
+                          <Label htmlFor="delivery-radius">Delivery Radius (km)</Label>
+                          <Input 
+                            id="delivery-radius" 
+                            type="number" 
+                            placeholder="e.g., 5" 
+                            value={deliveryRadius}
+                            onChange={(e) => setDeliveryRadius(Number(e.target.value))}
+                            min="1"
+                            max="20"
+                          />
+                          <p className="text-xs text-gray-500">
+                            Maximum distance you're willing to deliver products from your main location
+                          </p>
+                        </div>
+
+                        {/* Location Selection */}
+                        <div className="space-y-4">
+                          <div className="flex items-center gap-2">
+                            <MapPin className="h-5 w-5 text-blue-600" />
+                            <Label className="text-base font-medium">Selling & Delivery Locations</Label>
+                          </div>
+                          <p className="text-sm text-gray-600">
+                            Select your main selling location and up to 3 delivery locations within your delivery radius.
+                          </p>
+                          <MultiLocationPickerMap
+                            onLocationsChange={setLocations}
+                            initialLocations={locations}
+                            maxDeliveryLocations={3}
+                            deliveryRadius={deliveryRadius}
+                          />
                         </div>
 
                         {/* Manual Image Upload (if not using AI analyzer) */}
