@@ -288,7 +288,7 @@ export default function ListingDetails() {
                   variant="ghost"
                   size="icon"
                   className={`absolute top-4 right-4 h-10 w-10 rounded-full bg-background/90 backdrop-blur-sm hover:bg-background/95 shadow-md ${
-                    isFavorited ? "text-warm-500" : "text-muted-foreground"
+                    isFavorited ? "text-primary-warm" : "text-muted-foreground"
                   }`}
                   onClick={handleFavoriteToggle}
                 >
@@ -310,7 +310,7 @@ export default function ListingDetails() {
                   {!isService && (
                     <Badge variant={listing.condition === "New" ? "default" : "outline"} className={cn(
                       "text-sm",
-                      listing.condition === "New" && "bg-warm-500"
+                      listing.condition === "New" && "bg-primary-warm"
                     )}>
                       {listing.condition}
                     </Badge>
@@ -363,7 +363,7 @@ export default function ListingDetails() {
                 )}
               </div>
 
-              <Button className="w-full gap-2 text-lg py-6 bg-warm-500 hover:bg-warm-600 text-white" onClick={handleContactSeller}>
+              <Button variant="primary-warm" className="w-full gap-2 text-lg py-6" onClick={handleContactSeller}>
                 <MessageSquare className="h-5 w-5" />
                 Contact Seller
               </Button>

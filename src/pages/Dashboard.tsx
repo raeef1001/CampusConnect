@@ -1,8 +1,7 @@
-
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { db } from "@/lib/firebase";
-import { collection, getDocs, query, orderBy, doc, getDoc } from "firebase/firestore"; // Import doc and getDoc
+import { collection, getDocs, query, orderBy, doc, getDoc } from "firebase/firestore";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Navbar } from "@/components/layout/Navbar";
@@ -40,11 +39,43 @@ export default function Dashboard() {
   const [searchTerm, setSearchTerm] = useState("");
   const [sortOrder, setSortOrder] = useState("newest");
   const [currentPage, setCurrentPage] = useState(1);
-  const [showFilterSidebar, setShowFilterSidebar] = useState(false); // State for filter sidebar visibility
-  const itemsPerPage = 6; // Number of listings per page
+  const [showFilterSidebar, setShowFilterSidebar] = useState(false);
+  const itemsPerPage = 6;
   const [listings, setListings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Filter states
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000]);
+  const [selectedConditions, setSelectedConditions] = useState<string[]>([]);
+  const [selectedUniversity, setSelectedUniversity] = useState("");
+
+  // Memoized current filters object for FilterSidebar
+  const currentFilters = useMemo(() => ({
+    category: selectedCategory,
+    priceRange: priceRange,
+    condition: selectedConditions,
+    university: selectedUniversity,
+  }), [selectedCategory, priceRange, selectedConditions, selectedUniversity]);
+
+  // Handler for applying filters from FilterSidebar
+  const handleFilterChange = useCallback((filters: { category: string; priceRange: [number, number]; condition: string[]; university: string; }) => {
+    setSelectedCategory(filters.category);
+    setPriceRange(filters.priceRange);
+    setSelectedConditions(filters.condition);
+    setSelectedUniversity(filters.university);
+    setCurrentPage(1); // Reset to first page on filter change
+  }, []);
+
+  // Handler for resetting filters from FilterSidebar
+  const handleResetFilters = useCallback(() => {
+    setSelectedCategory("");
+    setPriceRange([0, 1000]);
+    setSelectedConditions([]);
+    setSelectedUniversity("");
+    setCurrentPage(1); // Reset to first page on filter reset
+  }, []);
 
   useEffect(() => {
     const fetchListings = async () => {
@@ -55,7 +86,7 @@ export default function Dashboard() {
         
         const fetchedListingsPromises = querySnapshot.docs.map(async (listingDoc) => {
           const data = listingDoc.data();
-          let sellerData = data.seller || {}; // Existing seller object
+          let sellerData = data.seller || {};
 
           // If seller data is incomplete or missing, fetch from users collection
           if (!sellerData.name || sellerData.name === "Unknown Seller" || !sellerData.university || sellerData.university === "Unknown University") {
@@ -138,7 +169,33 @@ export default function Dashboard() {
       );
     }
 
-    // 2. Sort
+    // 2. Filter by category
+    if (selectedCategory) {
+      currentListings = currentListings.filter(
+        (listing) => listing.category.toLowerCase() === selectedCategory.toLowerCase()
+      );
+    }
+
+    // 3. Filter by price range
+    currentListings = currentListings.filter(
+      (listing) => listing.price >= priceRange[0] && listing.price <= priceRange[1]
+    );
+
+    // 4. Filter by condition
+    if (selectedConditions.length > 0) {
+      currentListings = currentListings.filter((listing) =>
+        selectedConditions.includes(listing.condition.toLowerCase())
+      );
+    }
+
+    // 5. Filter by university
+    if (selectedUniversity) {
+      currentListings = currentListings.filter(
+        (listing) => listing.seller.university.toLowerCase() === selectedUniversity.toLowerCase()
+      );
+    }
+
+    // 6. Sort
     currentListings.sort((a, b) => {
       switch (sortOrder) {
         case "newest":
@@ -155,7 +212,7 @@ export default function Dashboard() {
     });
 
     return currentListings;
-  }, [searchTerm, sortOrder, listings]);
+  }, [searchTerm, sortOrder, listings, selectedCategory, priceRange, selectedConditions, selectedUniversity]);
 
   // Pagination logic
   const totalPages = Math.ceil(filteredAndSortedListings.length / itemsPerPage);
@@ -210,40 +267,45 @@ export default function Dashboard() {
             <div className="w-80 border-r bg-card shadow-md z-10">
               <div className="p-6">
                 <h2 className="text-lg font-semibold mb-6">Filters</h2>
-                <FilterSidebar />
+                <FilterSidebar 
+                  onFilterChange={handleFilterChange} 
+                  onResetFilters={handleResetFilters} 
+                  currentFilters={currentFilters} 
+                />
               </div>
             </div>
           )}
           
           {/* Main Content */}
           <main className="flex-1 p-6 overflow-auto">
+            {/* New header for search, create, notifications */}
+            <div className="flex justify-end items-center gap-4 mb-6">
+              <div className="relative w-full md:w-auto">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input 
+                  placeholder="Search listings..." 
+                  className="pl-10 w-full md:w-[250px] bg-card"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+              
+              <Button onClick={() => navigate('/create-listing')} className="bg-primary-warm hover:bg-warm-600 gap-2 whitespace-nowrap">
+                <Plus className="h-4 w-4" />
+                Create Listing
+              </Button>
+              
+              <Button variant="outline" size="icon" className="relative" onClick={() => navigate('/notifications')}>
+                <Bell className="h-5 w-5" />
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-warm-500 rounded-full text-primary-warm-foreground text-xs flex items-center justify-center">3</span>
+              </Button>
+            </div>
+
             <div className="mb-8">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+              <div className="mb-6">
                 <div>
                   <h1 className="text-2xl font-bold">Marketplace</h1>
                   <p className="text-muted-foreground">Discover items and services from your university community</p>
-                </div>
-                
-                <div className="flex items-center gap-4">
-                  <div className="relative w-full md:w-auto">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      placeholder="Search listings..." 
-                      className="pl-10 w-full md:w-[250px] bg-card"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                  </div>
-                  
-                  <Button onClick={() => navigate('/create-listing')} className="bg-primary-warm hover:bg-warm-600 gap-2 whitespace-nowrap">
-                    <Plus className="h-4 w-4" />
-                    Create Listing
-                  </Button>
-                  
-                  <Button variant="outline" size="icon" className="relative" onClick={() => navigate('/notifications')}>
-                    <Bell className="h-5 w-5" />
-                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-warm-500 rounded-full text-primary-warm-foreground text-xs flex items-center justify-center">3</span>
-                  </Button>
                 </div>
               </div>
               

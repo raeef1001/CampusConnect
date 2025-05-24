@@ -68,7 +68,7 @@ export function Navbar({ isAuthenticated = false, onCreateListing, onLogout }: N
             <Button variant="ghost" size="sm" asChild>
               <Link to="/auth">Login</Link>
             </Button>
-            <Button size="sm" className="bg-primary-warm hover:bg-warm-600" asChild>
+            <Button size="sm" variant="primary-warm" asChild>
               <Link to="/auth?tab=signup">Sign Up</Link>
             </Button>
           </div>
@@ -100,7 +100,7 @@ export function Navbar({ isAuthenticated = false, onCreateListing, onLogout }: N
         </div>
 
         <div className="flex items-center space-x-4">
-          <Button onClick={() => navigate('/create-listing')} className="bg-primary-warm hover:bg-warm-600">
+          <Button onClick={() => navigate('/create-listing')} variant="primary-warm">
             <Plus className="h-4 w-4 mr-2" />
             Create Listing
           </Button>
@@ -109,7 +109,7 @@ export function Navbar({ isAuthenticated = false, onCreateListing, onLogout }: N
             <Bell className="h-5 w-5" />
             {/* Placeholder for dynamic notification count */}
             {unreadCount > 0 && (
-              <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs bg-warm-500">
+              <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs bg-primary-warm">
                 {unreadCount}
               </Badge>
             )}
