@@ -68,6 +68,7 @@ export default function Messages() {
   const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [decryptedMessages, setDecryptedMessages] = useState<{ [key: string]: { text?: string; image?: string } }>({});
+  const [decryptedLastMessages, setDecryptedLastMessages] = useState<{ [key: string]: string }>({});
   const [newMessage, setNewMessage] = useState("");
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
@@ -120,15 +121,18 @@ export default function Messages() {
     for (const message of messages) {
       if (message.encrypted) {
         try {
+          // For decryption, determine the correct recipient based on who is NOT the sender
+          const recipientUid = message.senderId === currentUserUid ? otherParticipant : currentUserUid;
+          
           if (message.encryptedText) {
-            const decryptedText = await decryptMessage(message.encryptedText, message.senderId, otherParticipant);
+            const decryptedText = await decryptMessage(message.encryptedText, message.senderId, recipientUid);
             newDecryptedMessages[message.id] = { 
               ...newDecryptedMessages[message.id], 
               text: decryptedText 
             };
           }
           if (message.encryptedImage) {
-            const decryptedImage = await decryptImage(message.encryptedImage, message.senderId, otherParticipant);
+            const decryptedImage = await decryptImage(message.encryptedImage, message.senderId, recipientUid);
             newDecryptedMessages[message.id] = { 
               ...newDecryptedMessages[message.id], 
               image: decryptedImage 
@@ -136,11 +140,58 @@ export default function Messages() {
           }
         } catch (error) {
           console.error('Failed to decrypt message:', error);
+          // Set fallback text for failed decryption
+          newDecryptedMessages[message.id] = { 
+            ...newDecryptedMessages[message.id], 
+            text: message.encryptedText ? '[Message could not be decrypted]' : undefined,
+            image: message.encryptedImage ? '/placeholder.svg' : undefined
+          };
         }
       }
     }
 
     setDecryptedMessages(prev => ({ ...prev, ...newDecryptedMessages }));
+  };
+
+  // Decrypt last messages for chat list
+  const decryptLastMessagesAsync = async (chats: Chat[], currentUserUid: string) => {
+    if (!isEncryptionSupported()) return;
+
+    const newDecryptedLastMessages: { [key: string]: string } = {};
+
+    for (const chat of chats) {
+      if (chat.encryptedLastMessage) {
+        try {
+          const otherParticipant = getOtherParticipant(chat.participants, currentUserUid);
+          if (!otherParticipant) continue;
+
+          // For last messages, we need to determine who sent it
+          // Since we don't have the sender info in the chat object, we'll try both possibilities
+          let decryptedText: string | null = null;
+          
+          // Try decrypting assuming current user sent it (recipient is other participant)
+          try {
+            decryptedText = await decryptMessage(chat.encryptedLastMessage, currentUserUid, otherParticipant);
+          } catch {
+            // If that fails, try assuming other participant sent it (recipient is current user)
+            try {
+              decryptedText = await decryptMessage(chat.encryptedLastMessage, otherParticipant, currentUserUid);
+            } catch {
+              decryptedText = '[Message could not be decrypted]';
+            }
+          }
+
+          if (decryptedText) {
+            newDecryptedLastMessages[chat.id] = decryptedText;
+          }
+        } catch (error) {
+          console.error('Failed to decrypt last message:', error);
+          newDecryptedLastMessages[chat.id] = '[Message could not be decrypted]';
+        }
+      }
+    }
+
+    setDecryptedLastMessages(prev => ({ ...prev, ...newDecryptedLastMessages }));
   };
 
   useEffect(() => {
@@ -183,6 +234,11 @@ export default function Messages() {
           const allParticipantUids = new Set<string>();
           fetchedChats.forEach(chat => chat.participants.forEach(uid => allParticipantUids.add(uid)));
           await fetchUserProfiles(Array.from(allParticipantUids));
+
+          // Decrypt last messages for chat list
+          if (user) {
+            await decryptLastMessagesAsync(fetchedChats, user.uid);
+          }
 
           const { sellerId, listingId: initialListingId, initialMessage } = location.state || {};
           let chatToSelect: Chat | null = null;
@@ -613,7 +669,7 @@ export default function Messages() {
                           <div className="ml-3 flex-1 min-w-0">
                             <p className="font-medium truncate">{partner?.name || "Unknown User"}</p>
                             <p className="text-sm text-muted-foreground line-clamp-1">
-                              {chat.lastMessage || "No messages yet."}
+                              {decryptedLastMessages[chat.id] || chat.lastMessage || "No messages yet."}
                             </p>
                           </div>
                         </div>
