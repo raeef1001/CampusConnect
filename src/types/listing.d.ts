@@ -8,6 +8,12 @@ export interface LocationData {
   address?: string; // Added to store the human-readable address
 }
 
+export interface VisibilitySettings {
+  mode: 'university' | 'all_students';
+  allowedUniversities?: string[]; // For university mode, specify which universities can see the listing
+  description?: string; // Optional description for the visibility setting
+}
+
 export interface Listing {
   id: string;
   title: string;
@@ -16,24 +22,16 @@ export interface Listing {
   image: string;
   imageUrl: string; // Add imageUrl property for database compatibility
   sellerId: string;
-<<<<<<< HEAD
-
   userId?: string; // Optional fallback field for seller ID
   createdBy?: string; // Optional fallback field for seller ID
   category: string;
-
-  categories: string[]; // Changed to array of strings
-=======
-  userId?: string; // Optional fallback field for seller ID
-  createdBy?: string; // Optional fallback field for seller ID
-  category: string;
->>>>>>> 6d5a776e3b0f50dc41009ebd9eec322ff44ed963
   condition: string;
   location: string; // Keep for backward compatibility
   locations?: LocationData[]; // New multi-location support
   deliveryRadius?: number; // Delivery radius in kilometers
   isAvailable?: boolean; // Product availability status
   availabilityStatus?: 'available' | 'sold' | 'reserved' | 'unavailable'; // Detailed availability status
+  visibilitySettings?: VisibilitySettings; // New visibility control settings
   createdAt: {
     seconds: number;
     nanoseconds: number;

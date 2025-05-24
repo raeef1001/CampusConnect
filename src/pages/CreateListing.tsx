@@ -10,8 +10,9 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { FloatingChat } from "@/components/ui/floating-chat";
 import { PriceAdvisor } from "@/components/ui/price-advisor";
 import { ImageAnalyzer } from "@/components/ui/image-analyzer";
+import { VisibilityControls } from "@/components/marketplace/VisibilityControls";
 import MultiLocationPickerMap from "@/components/MultiLocationPickerMap";
-import { LocationData } from '@/types/listing.d'; // Import LocationData from types
+import { LocationData, VisibilitySettings } from '@/types/listing.d'; // Import LocationData from types
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, Sparkles, MapPin } from 'lucide-react';
 import { db, auth, storage } from '@/lib/firebase';
@@ -20,6 +21,7 @@ import { dbRateLimiter } from '@/lib/rateLimiter';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useToast } from '@/components/ui/use-toast';
 import { ImageAnalysisResult } from '@/lib/gemini';
+import { useEffect } from 'react';
 
 export default function CreateListing() {
   const navigate = useNavigate();
@@ -34,8 +36,33 @@ export default function CreateListing() {
   const [aiAnalyzed, setAiAnalyzed] = useState(false);
   const [locations, setLocations] = useState<LocationData[]>([]);
   const [deliveryRadius, setDeliveryRadius] = useState<number>(5);
+  const [visibilitySettings, setVisibilitySettings] = useState<VisibilitySettings>({
+    mode: 'all_students'
+  });
+  const [userUniversity, setUserUniversity] = useState<string>('');
 
   const { toast } = useToast();
+
+  // Fetch user's university on component mount
+  useEffect(() => {
+    const fetchUserUniversity = async () => {
+      const user = auth.currentUser;
+      if (user) {
+        try {
+          const userDocRef = doc(db, "users", user.uid);
+          const userDocSnap = await getDoc(userDocRef);
+          if (userDocSnap.exists()) {
+            const userData = userDocSnap.data();
+            setUserUniversity(userData.university || '');
+          }
+        } catch (error) {
+          console.error("Error fetching user university:", error);
+        }
+      }
+    };
+
+    fetchUserUniversity();
+  }, []);
 
   const handleImageAnalysisComplete = (result: ImageAnalysisResult) => {
     setTitle(result.title);
@@ -169,6 +196,7 @@ export default function CreateListing() {
         deliveryRadius: deliveryRadius, // Delivery radius in kilometers
         isAvailable: true, // New listings are available by default
         availabilityStatus: 'available', // Default availability status
+        visibilitySettings: visibilitySettings, // Visibility control settings
         userEmail: user.email, // Keep userEmail at top level
         seller: sellerProfile, // Add the complete seller profile
         createdAt: serverTimestamp(),
@@ -229,6 +257,13 @@ export default function CreateListing() {
                         onPriceSuggestion={handlePriceSuggestion}
                       />
                     )}
+
+                    {/* Visibility Controls */}
+                    <VisibilityControls
+                      visibilitySettings={visibilitySettings}
+                      onVisibilityChange={setVisibilitySettings}
+                      userUniversity={userUniversity}
+                    />
                   </div>
                 </div>
 
