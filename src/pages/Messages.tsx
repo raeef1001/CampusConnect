@@ -2,47 +2,49 @@ import { useState, useEffect, useRef } from "react";
 import { Navbar } from "@/components/layout/Navbar";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { FloatingChat } from "@/components/ui/floating-chat";
-import { useLocation } from "react-router-dom"; // Import useLocation
-import { auth, db } from "@/lib/firebase"; // Import auth and db
-import { collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, getDocs, doc, getDoc, updateDoc } from "firebase/firestore"; // Import doc, getDoc, updateDoc
+import { useLocation } from "react-router-dom";
+import { auth, db, storage } from "@/lib/firebase"; // Import storage
+import { collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, getDocs, doc, getDoc, updateDoc, Timestamp, FieldValue } from "firebase/firestore"; // Import Timestamp, FieldValue
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage"; // Import storage functions
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Send, User, MessageSquare } from "lucide-react";
+import { Send, User, MessageSquare, Image as ImageIcon, ShoppingCart, DollarSign } from "lucide-react"; // Import new icons
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { User as FirebaseUser } from "firebase/auth";
-import { addNotification } from "@/utils/notifications"; // Import addNotification utility
+import { addNotification } from "@/utils/notifications";
+import { ListingCard } from "@/components/marketplace/ListingCard"; // Import ListingCard
+import { Listing } from "@/types/listing"; // Assuming you have a Listing type
+import { ListingSelector } from "@/components/marketplace/ListingSelector"; // Import ListingSelector
 
 interface Chat {
   id: string;
-  participants: string[]; // Array of user UIDs
+  participants: string[];
   lastMessage?: string;
-  createdAt: { // Add createdAt to Chat interface
-    seconds: number;
-    nanoseconds: number;
-  };
-  updatedAt?: {
-    seconds: number;
-    nanoseconds: number;
-  };
-  listingId?: string; // Add listingId to Chat interface
+  createdAt: Timestamp | FieldValue;
+  updatedAt?: Timestamp | FieldValue;
+  listingId?: string;
 }
 
 interface Message {
   id: string;
   senderId: string;
-  text: string;
-  createdAt: {
-    seconds: number;
-    nanoseconds: number;
-  };
+  text?: string;
+  image?: string;
+  listingId?: string;
+  orderId?: string;
+  cartId?: string;
+  paymentStatus?: 'pending' | 'completed' | 'failed';
+  createdAt: Timestamp | FieldValue;
 }
 
 interface UserProfile {
   uid: string;
   name: string;
   avatar?: string;
+  university?: string; // Add university
+  rating?: number; // Add rating
 }
 
 export default function Messages() {
@@ -52,16 +54,36 @@ export default function Messages() {
   const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
   const [loadingChats, setLoadingChats] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
-  const [userProfiles, setUserProfiles] = useState<{ [key: string]: UserProfile }>({}); // Store fetched user profiles
+  const [userProfiles, setUserProfiles] = useState<{ [key: string]: UserProfile }>({});
+  const [fetchedListings, setFetchedListings] = useState<{ [key: string]: Listing }>({}); // Store fetched listings
+  const [isListingSelectorOpen, setIsListingSelectorOpen] = useState(false); // State for listing selector modal
 
   const location = useLocation();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null); // Ref for file input
 
   // Scroll to bottom of messages
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  // Handle image file selection
+  const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files && event.target.files[0]) {
+      setSelectedImage(event.target.files[0]);
+    }
+  };
+
+  // Upload image to Firebase Storage
+  const uploadImage = async (imageFile: File) => {
+    if (!currentUser) return null;
+    const storageRef = ref(storage, `chat_images/${currentUser.uid}/${imageFile.name}_${Date.now()}`);
+    await uploadBytes(storageRef, imageFile);
+    return getDownloadURL(storageRef); // This returns the URL, which will be stored as 'image'
   };
 
   useEffect(() => {
@@ -129,8 +151,8 @@ export default function Messages() {
               const newChat: Chat = {
                 id: newChatRef.id,
                 participants: [user.uid, sellerId],
-                createdAt: { seconds: Date.now() / 1000, nanoseconds: 0 },
-                updatedAt: { seconds: Date.now() / 1000, nanoseconds: 0 },
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp(),
               };
               setChats(prev => [newChat, ...prev]);
               setSelectedChat(newChat);
@@ -167,7 +189,7 @@ export default function Messages() {
         orderBy("createdAt", "asc")
       );
 
-      const unsubscribeMessages = onSnapshot(q, (snapshot) => {
+      const unsubscribeMessages = onSnapshot(q, async (snapshot) => {
         const fetchedMessages: Message[] = snapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
@@ -175,6 +197,55 @@ export default function Messages() {
         setMessages(fetchedMessages);
         setLoadingMessages(false);
         scrollToBottom();
+
+        // Fetch listing details for shared product cards
+        const listingIdsToFetch = new Set<string>();
+        fetchedMessages.forEach(message => {
+          if (message.listingId && !fetchedListings[message.listingId]) {
+            listingIdsToFetch.add(message.listingId);
+          }
+        });
+
+        if (listingIdsToFetch.size > 0) {
+          const newFetchedListings: { [key: string]: Listing } = { ...fetchedListings };
+          for (const listingId of Array.from(listingIdsToFetch)) {
+            const listingDocRef = doc(db, "listings", listingId);
+            const listingDocSnap = await getDoc(listingDocRef);
+            if (listingDocSnap.exists()) {
+              const listingData = listingDocSnap.data();
+              const sellerDocRef = doc(db, "users", listingData.sellerId);
+              const sellerDocSnap = await getDoc(sellerDocRef);
+              let sellerProfileData: UserProfile | null = null;
+              if (sellerDocSnap.exists()) {
+                sellerProfileData = { uid: sellerDocSnap.id, ...sellerDocSnap.data() } as UserProfile;
+              } else {
+                sellerProfileData = { uid: listingData.sellerId, name: "Unknown Seller", avatar: "/placeholder.svg", university: "N/A", rating: 0 };
+              }
+
+              newFetchedListings[listingId] = {
+                id: listingDocSnap.id,
+                title: listingData.title,
+                description: listingData.description,
+                price: String(listingData.price), // Convert price to string
+                image: listingData.imageUrl, // Map imageUrl from Firestore to image
+                sellerId: listingData.sellerId,
+                category: listingData.category,
+                condition: listingData.condition,
+                location: listingData.location,
+                createdAt: listingData.createdAt,
+                updatedAt: listingData.updatedAt,
+                seller: {
+                  userId: sellerProfileData.uid,
+                  name: sellerProfileData.name,
+                  avatar: sellerProfileData.avatar,
+                  university: sellerProfileData.university || "N/A",
+                  rating: sellerProfileData.rating || 0,
+                }
+              } as Listing;
+            }
+          }
+          setFetchedListings(newFetchedListings);
+        }
       }, (error) => {
         console.error("Error fetching messages: ", error);
         setLoadingMessages(false);
@@ -184,24 +255,43 @@ export default function Messages() {
     } else {
       setMessages([]);
     }
-  }, [selectedChat]);
+  }, [selectedChat, fetchedListings]); // Added fetchedListings to dependencies
 
   const handleSendMessage = async () => {
-    if (newMessage.trim() === "" || !selectedChat || !currentUser) return;
+    if ((newMessage.trim() === "" && !selectedImage && !selectedListing) || !selectedChat || !currentUser) {
+      return;
+    }
 
     try {
-      await addDoc(collection(db, "chats", selectedChat.id, "messages"), {
+      const messageData: Partial<Message> = { // Changed to const
         senderId: currentUser.uid,
-        text: newMessage,
         createdAt: serverTimestamp(),
-      });
+      };
+
+      if (newMessage.trim() !== "") {
+        messageData.text = newMessage;
+      }
+
+      if (selectedImage) {
+        const uploadedImageUrl = await uploadImage(selectedImage);
+        if (uploadedImageUrl) {
+          messageData.image = uploadedImageUrl; // Store as 'image'
+        }
+      }
+
+      if (selectedListing) {
+        messageData.listingId = selectedListing.id;
+      }
+
+      await addDoc(collection(db, "chats", selectedChat.id, "messages"), messageData);
+
       // Update lastMessage and updatedAt in chat document
       await updateDoc(doc(db, "chats", selectedChat.id), {
-        lastMessage: newMessage,
+        lastMessage: newMessage || (selectedImage ? "Image" : selectedListing ? "Product Card" : "Message"),
         updatedAt: serverTimestamp(),
       });
 
-      // Create notification for the recipient using the utility function
+      // Create notification for the recipient
       const chatPartner = getChatPartner(selectedChat);
       if (chatPartner && currentUser) {
         await addNotification({
@@ -211,11 +301,106 @@ export default function Messages() {
           relatedId: selectedChat.id,
         });
       }
+
       setNewMessage("");
+      setSelectedImage(null);
+      setSelectedListing(null);
       scrollToBottom();
     } catch (error) {
       console.error("Error sending message:", error);
     }
+  };
+
+  const handleShareListing = async (listing: Listing) => {
+    setSelectedListing(listing);
+    setNewMessage(`Check out this listing: ${listing.title}`);
+    setIsListingSelectorOpen(false); // Close the selector after selecting
+  };
+
+  const handleAddToCart = async (listingId: string) => {
+    if (!currentUser || !selectedChat) return;
+
+    try {
+      // Dummy add to cart logic
+      await addDoc(collection(db, "users", currentUser.uid, "cart"), {
+        listingId: listingId,
+        addedAt: serverTimestamp(),
+        quantity: 1, // Default quantity
+      });
+
+      await addDoc(collection(db, "chats", selectedChat.id, "messages"), {
+        senderId: currentUser.uid,
+        text: `Added listing to cart: ${listingId}`,
+        cartId: listingId, // Use listingId as a dummy cartId for now
+        createdAt: serverTimestamp(),
+      });
+
+      await updateDoc(doc(db, "chats", selectedChat.id), {
+        lastMessage: "Added item to cart",
+        updatedAt: serverTimestamp(),
+      });
+
+      alert("Item added to cart (dummy action)!");
+      scrollToBottom();
+    } catch (error) {
+      console.error("Error adding to cart:", error);
+    }
+  };
+
+  const handlePlaceOrder = async (listingId: string) => {
+    if (!currentUser || !selectedChat) return;
+
+    try {
+      // Dummy payment processing
+      const paymentSuccess = await handleDummyPayment();
+
+      if (paymentSuccess) {
+        // Dummy order creation
+        const orderRef = await addDoc(collection(db, "orders"), {
+          buyerId: currentUser.uid,
+          listingId: listingId,
+          orderDate: serverTimestamp(),
+          status: "completed",
+          totalAmount: 100, // Dummy amount
+        });
+
+        await addDoc(collection(db, "chats", selectedChat.id, "messages"), {
+          senderId: currentUser.uid,
+          text: `Placed order for listing: ${listingId}`,
+          orderId: orderRef.id,
+          paymentStatus: "completed",
+          createdAt: serverTimestamp(),
+        });
+
+        await updateDoc(doc(db, "chats", selectedChat.id), {
+          lastMessage: "Placed an order",
+          updatedAt: serverTimestamp(),
+        });
+
+        alert("Order placed successfully (dummy action)!");
+      } else {
+        await addDoc(collection(db, "chats", selectedChat.id, "messages"), {
+          senderId: currentUser.uid,
+          text: `Failed to place order for listing: ${listingId}`,
+          paymentStatus: "failed",
+          createdAt: serverTimestamp(),
+        });
+        alert("Payment failed (dummy action).");
+      }
+      scrollToBottom();
+    } catch (error) {
+      console.error("Error placing order:", error);
+    }
+  };
+
+  const handleDummyPayment = async (): Promise<boolean> => {
+    // Simulate a payment process
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        const success = Math.random() > 0.2; // 80% chance of success
+        resolve(success);
+      }, 1500);
+    });
   };
 
   const getChatPartner = (chat: Chat) => {
@@ -245,7 +430,7 @@ export default function Messages() {
                   {loadingChats ? (
                     <div className="p-4 space-y-4">
                       {[...Array(5)].map((_, i) => (
-                        <div key={i} className="flex items-center space-x-3">
+                        <div key={`chat-skeleton-${i}`} className="flex items-center space-x-3">
                           <Skeleton className="h-10 w-10 rounded-full" />
                           <div className="flex-1 space-y-2">
                             <Skeleton className="h-4 w-3/4" />
@@ -306,7 +491,7 @@ export default function Messages() {
                       {loadingMessages ? (
                         <div className="space-y-4">
                           {[...Array(5)].map((_, i) => (
-                            <div key={i} className={cn(
+                            <div key={`message-skeleton-${i}`} className={cn(
                               "flex",
                               i % 2 === 0 ? "justify-start" : "justify-end"
                             )}>
@@ -316,8 +501,8 @@ export default function Messages() {
                         </div>
                       ) : messages.length > 0 ? (
                         messages.map((message) => (
-                          <div 
-                            key={message.id} 
+                          <div
+                            key={message.id}
                             className={cn(
                               "flex",
                               message.senderId === currentUser?.uid ? "justify-end" : "justify-start"
@@ -325,13 +510,51 @@ export default function Messages() {
                           >
                             <div className={cn(
                               "max-w-[70%] p-3 rounded-lg",
-                              message.senderId === currentUser?.uid 
-                                ? "bg-primary-warm text-white rounded-br-none" 
+                              message.senderId === currentUser?.uid
+                                ? "bg-primary-warm text-white rounded-br-none"
                                 : "bg-gray-200 text-gray-800 rounded-bl-none"
                             )}>
-                              <p>{message.text}</p>
+                              {message.text && <p>{message.text}</p>}
+                              {message.image && (
+                                <img src={message.image} alt="Shared" className="max-w-full h-auto rounded-md mt-2" />
+                              )}
+                              {message.listingId && fetchedListings[message.listingId] && (
+                                <div className="mt-2 p-2 bg-white rounded-md shadow-sm">
+                                  <p className="font-semibold">Shared Product:</p>
+                                  <ListingCard {...fetchedListings[message.listingId]} /> {/* Destructure props */}
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="mt-2 mr-2"
+                                    onClick={() => handleAddToCart(message.listingId!)}
+                                  >
+                                    <ShoppingCart className="h-4 w-4 mr-1" /> Add to Cart
+                                  </Button>
+                                  <Button
+                                    variant="default"
+                                    size="sm"
+                                    className="mt-2"
+                                    onClick={() => handlePlaceOrder(message.listingId!)}
+                                  >
+                                    <DollarSign className="h-4 w-4 mr-1" /> Place Order
+                                  </Button>
+                                </div>
+                              )}
+                              {message.orderId && (
+                                <div className="mt-2 p-2 bg-white rounded-md shadow-sm">
+                                  <p className="font-semibold">Order Placed:</p>
+                                  <p className="text-sm text-gray-600">Order ID: {message.orderId}</p>
+                                  <p className="text-sm text-gray-600">Status: {message.paymentStatus}</p>
+                                </div>
+                              )}
+                              {message.cartId && (
+                                <div className="mt-2 p-2 bg-white rounded-md shadow-sm">
+                                  <p className="font-semibold">Item Added to Cart:</p>
+                                  <p className="text-sm text-gray-600">Cart ID: {message.cartId}</p>
+                                </div>
+                              )}
                               <span className="block text-xs text-right mt-1 opacity-80">
-                                {new Date(message.createdAt.seconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                {message.createdAt && (message.createdAt as Timestamp).seconds ? new Date((message.createdAt as Timestamp).seconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Invalid Date'}
                               </span>
                             </div>
                           </div>
@@ -345,6 +568,34 @@ export default function Messages() {
                       <div ref={messagesEndRef} />
                     </div>
                     <div className="p-4 border-t border-gray-200 bg-white flex items-center space-x-2">
+                      <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleImageSelect}
+                        className="hidden"
+                        accept="image/*"
+                      />
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="shrink-0"
+                      >
+                        <ImageIcon className="h-5 w-5" />
+                      </Button>
+                      {selectedImage && (
+                        <div className="flex items-center space-x-2 p-2 border rounded-md">
+                          <img src={URL.createObjectURL(selectedImage)} alt="Selected" className="h-8 w-8 object-cover rounded" />
+                          <span className="text-sm">{selectedImage.name}</span>
+                          <Button variant="ghost" size="sm" onClick={() => setSelectedImage(null)}>x</Button>
+                        </div>
+                      )}
+                      {selectedListing && (
+                        <div className="flex items-center space-x-2 p-2 border rounded-md">
+                          <span className="text-sm">Sharing: {selectedListing.title}</span>
+                          <Button variant="ghost" size="sm" onClick={() => setSelectedListing(null)}>x</Button>
+                        </div>
+                      )}
                       <Input
                         placeholder="Type your message..."
                         value={newMessage}
@@ -358,6 +609,14 @@ export default function Messages() {
                       />
                       <Button onClick={handleSendMessage}>
                         <Send className="h-5 w-5" />
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="icon" 
+                        onClick={() => setIsListingSelectorOpen(true)} // Open the listing selector
+                        className="shrink-0"
+                      >
+                        <ShoppingCart className="h-5 w-5" />
                       </Button>
                     </div>
                   </>
@@ -373,6 +632,15 @@ export default function Messages() {
       </div>
       
       <FloatingChat />
+
+      {currentUser && (
+        <ListingSelector
+          isOpen={isListingSelectorOpen}
+          onClose={() => setIsListingSelectorOpen(false)}
+          onSelectListing={handleShareListing}
+          currentUserId={currentUser.uid}
+        />
+      )}
     </div>
   );
 }
