@@ -37,29 +37,22 @@
     --primary-warm: 25 95% 53%; /* A warm orange */
     --primary-warm-foreground: 0 0% 100%; /* White for contrast */
 
-    --sidebar-background: 0 0% 98%;
-
-    --sidebar-foreground: 240 5.3% 26.1%;
-
-    --sidebar-primary: 240 5.9% 10%;
-
-    --sidebar-primary-foreground: 0 0% 98%;
-
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-background: 220 15% 20%; /* Dark blue-grey */
+    --sidebar-foreground: 210 20% 90%; /* Light grey */
+    --sidebar-primary: 25 95% 53%; /* Orange for active item */
+    --sidebar-primary-foreground: 0 0% 100%; /* White for active item text */
+    --sidebar-accent: 220 15% 25%; /* Slightly lighter dark blue-grey for hover/focus */
+    --sidebar-accent-foreground: 210 20% 90%; /* Light grey */
+    --sidebar-border: 220 15% 25%; /* Border color for sidebar elements */
+    --sidebar-ring: 25 95% 53%; /* Ring color for focus states */
   }
 
   .dark {
     --primary-warm: 25 95% 53%; /* Same warm orange for dark mode */
     --primary-warm-foreground: 0 0% 100%; /* White for contrast */
 
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
+    --background: 222.2 84% 4.9%; /* Keep dark mode background */
+    --foreground: 210 40% 98%; /* Keep dark mode foreground */
 
     --card: 222.2 84% 4.9%;
     --card-foreground: 210 40% 98%;

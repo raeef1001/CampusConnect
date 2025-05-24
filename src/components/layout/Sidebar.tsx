@@ -116,7 +116,7 @@ export function Sidebar({ className, isCollapsed = false, onToggle }: SidebarPro
 
           {!collapsed && (
             <div className="pt-4">
-              <p className="px-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              <p className="px-3 text-xs font-medium text-sidebar-foreground uppercase tracking-wider">
                 Admin
               </p>
               <div className="space-y-1 mt-2">
@@ -151,7 +151,7 @@ export function Sidebar({ className, isCollapsed = false, onToggle }: SidebarPro
           {!collapsed && (
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium truncate text-sidebar-foreground">John Doe</p>
-              <p className="text-xs text-muted-foreground truncate">Computer Science</p>
+              <p className="text-xs text-sidebar-foreground truncate">Computer Science</p>
             </div>
           )}
         </div>
