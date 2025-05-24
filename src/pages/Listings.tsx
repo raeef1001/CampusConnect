@@ -124,7 +124,9 @@ export default function Listings() {
       let currentListingsQuery = baseQuery;
 
       if (filterParam === "my-listings" && currentUser) {
-        currentListingsQuery = query(listingsCollectionRef, where("userId", "==", currentUser.uid), orderBy("createdAt", "desc"));
+        // For "my-listings", we need to fetch all listings and filter client-side
+        // because we need to check multiple possible seller ID fields
+        currentListingsQuery = query(listingsCollectionRef, orderBy("createdAt", "desc"));
       } else if (filterParam === "bookmarked-listings" && currentUser) {
         const bookmarksQuery = query(collection(db, "bookmarks"), where("userId", "==", currentUser.uid));
         unsubscribe = onSnapshot(bookmarksQuery, async (bookmarkSnapshot) => {
@@ -255,6 +257,25 @@ unsubscribe = onSnapshot(paginatedQuery, async (snapshot) => {
       };
     }
     listingsData.push(listing);
+  }
+
+  // Client-side filtering for "my-listings"
+  if (filterParam === "my-listings" && currentUser) {
+    console.log("Filtering my-listings for user:", currentUser.uid);
+    listingsData = listingsData.filter(listing => {
+      // Check multiple possible seller ID fields
+      const sellerId = listing.sellerId || 
+                      listing.userId || 
+                      listing.createdBy || 
+                      listing.seller?.userId || 
+                      '';
+      
+      console.log("Listing:", listing.title, "sellerId:", sellerId, "matches:", sellerId === currentUser.uid);
+      
+      // Only include listings where we can identify the seller and it matches the current user
+      return sellerId && sellerId === currentUser.uid;
+    });
+    console.log("Filtered listings count:", listingsData.length);
   }
 
   // Client-side filtering for search query (product title/description)

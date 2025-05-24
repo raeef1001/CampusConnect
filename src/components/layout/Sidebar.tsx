@@ -135,7 +135,13 @@ export function Sidebar({ className, isCollapsed = false, onToggle }: SidebarPro
             {menuItems(unreadNotificationsCount, unreadMessagesCount).map((item: MenuItem) => (
               <Button
                 key={item.href}
-                variant={location.pathname === item.href ? "sidebar-primary" : "ghost"}
+                variant={
+                  // Check if current location matches the menu item
+                  (location.pathname + location.search) === item.href || 
+                  (item.href === "/listings" && location.pathname === "/listings" && !location.search)
+                    ? "sidebar-primary" 
+                    : "ghost"
+                }
                 className={cn(
                   "w-full justify-start text-black hover:bg-sidebar-accent hover:text-black",
                   collapsed && "px-2"

@@ -15,6 +15,8 @@ export interface Listing {
   image: string;
   imageUrl: string; // Add imageUrl property for database compatibility
   sellerId: string;
+  userId?: string; // Optional fallback field for seller ID
+  createdBy?: string; // Optional fallback field for seller ID
   category: string;
   condition: string;
   location: string; // Keep for backward compatibility
@@ -30,7 +32,7 @@ export interface Listing {
     seconds: number;
     nanoseconds: number;
   };
-  seller: { // Add seller object
+  seller?: { // Make seller object optional
     name: string;
     avatar?: string;
     university: string;
