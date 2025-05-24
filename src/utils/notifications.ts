@@ -11,45 +11,61 @@ interface NewNotification {
 
 export const addNotification = async (notification: NewNotification) => {
   try {
-    // Fetch recipient's notification preferences
-    const userDocRef = doc(db, "users", notification.userId);
-    const userDocSnap = await getDoc(userDocRef);
-    let preferences: { [key: string]: boolean } = {};
+    // Add timeout to prevent hanging
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Notification timeout')), 5000); // 5 second timeout
+    });
 
-    if (userDocSnap.exists()) {
-      preferences = userDocSnap.data().preferences || {};
+    // Fetch recipient's notification preferences with timeout
+    let preferences: { [key: string]: boolean } = {};
+    try {
+      const userDocRef = doc(db, "users", notification.userId);
+      const userDocSnap = await Promise.race([getDoc(userDocRef), timeoutPromise]) as any;
+      
+      if (userDocSnap && userDocSnap.exists && userDocSnap.exists()) {
+        preferences = userDocSnap.data()?.preferences || {};
+      }
+    } catch (prefError) {
+      console.warn("Could not fetch user preferences, using defaults:", prefError);
+      // Continue with default preferences
     }
 
     // Determine if notification should be sent based on preferences
     let shouldSend = true;
     switch (notification.type) {
       case "message":
-        shouldSend = preferences.messageNotifications ?? true; // Default to true if not set
+        shouldSend = preferences.messageNotifications ?? true;
         break;
       case "bookmark":
-        shouldSend = preferences.bookmarkNotifications ?? true; // Default to true if not set
+        shouldSend = preferences.bookmarkNotifications ?? true;
         break;
       case "system":
-        shouldSend = preferences.systemNotifications ?? true; // Default to true if not set
+        shouldSend = preferences.systemNotifications ?? true;
         break;
-      // For other types, default to true or add specific preferences
+      case "bid":
+        shouldSend = preferences.bidNotifications ?? true;
+        break;
       default:
         shouldSend = true;
         break;
     }
 
     if (shouldSend) {
-      await addDoc(collection(db, "notifications"), {
-        ...notification,
-        read: false,
-        createdAt: serverTimestamp(),
-      });
+      // Add notification with timeout
+      await Promise.race([
+        addDoc(collection(db, "notifications"), {
+          ...notification,
+          read: false,
+          createdAt: serverTimestamp(),
+        }),
+        timeoutPromise
+      ]);
       console.log("Notification added successfully for user:", notification.userId);
     } else {
       console.log(`Notification for user ${notification.userId} of type ${notification.type} skipped due to user preferences.`);
     }
   } catch (error) {
     console.error("Error adding notification:", error);
-    // In a real application, you might want to log this error to a monitoring service
+    // Don't throw the error to prevent it from breaking the calling function
   }
 };

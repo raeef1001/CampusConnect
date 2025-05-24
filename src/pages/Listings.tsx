@@ -164,7 +164,12 @@ export default function Listings() {
 
                     // If seller data is incomplete or missing, fetch from users collection
                     if (!sellerData.name || sellerData.name === "Unknown Seller" || !sellerData.university || sellerData.university === "Unknown University") {
-                      const userIdToFetch = data.userId || data.sellerId; // Prefer userId, fallback to sellerId
+                      // Use the same seller ID resolution logic as other components
+                      const userIdToFetch = data.sellerId || 
+                                           data.userId || 
+                                           data.createdBy || 
+                                           data.seller?.userId || 
+                                           '';
                       if (userIdToFetch) {
                         try {
                           const userDocRef = doc(db, "users", userIdToFetch);
@@ -251,7 +256,12 @@ unsubscribe = onSnapshot(paginatedQuery, async (snapshot) => {
 
       // If seller data is incomplete or missing, fetch from users collection
       if (!sellerData.name || sellerData.name === "Unknown Seller" || !sellerData.university || sellerData.university === "Unknown University") {
-        const userIdToFetch = data.userId || data.sellerId; // Prefer userId, fallback to sellerId
+        // Use the same seller ID resolution logic as other components
+        const userIdToFetch = data.sellerId || 
+                             data.userId || 
+                             data.createdBy || 
+                             data.seller?.userId || 
+                             '';
         if (userIdToFetch) {
           try {
             const userDocRef = doc(db, "users", userIdToFetch);

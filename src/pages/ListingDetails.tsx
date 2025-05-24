@@ -14,41 +14,10 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/components/ui/use-toast";
 import { reverseGeocode, getLocationName } from "@/utils/geocoding";
 import LocationDisplay from "@/components/LocationDisplay";
-<<<<<<< HEAD
 import BidDialog from "@/components/ui/bid-dialog";
-
-interface LocationData {
-  id: string;
-  lat: number;
-  lng: number;
-  type: 'main' | 'delivery';
-  name?: string;
-}
-
-interface Listing {
-  id: string;
-  title: string;
-  description: string;
-  price: number;
-  category: string;
-  condition: string;
-  imageUrl: string;
-  sellerId: string;
-  userEmail: string;
-  locations?: LocationData[];
-  deliveryRadius?: number;
-  isAvailable?: boolean;
-  availabilityStatus?: 'available' | 'sold' | 'reserved' | 'unavailable';
-  createdAt: {
-    seconds: number;
-    nanoseconds: number;
-  };
-}
-=======
 import { Listing, LocationData } from "@/types/listing.d";
->>>>>>> 89b431092f6e9437c9f0b6a40210e6a75e273f8c
 
-interface SellerProfile { // Define SellerProfile interface
+interface SellerProfile {
   name: string;
   avatar?: string;
   university: string;
@@ -65,8 +34,8 @@ export default function ListingDetails() {
   const [isFavorited, setIsFavorited] = useState(false);
   const [showBidDialog, setShowBidDialog] = useState(false);
   const { toast } = useToast();
-  const [sellerProfile, setSellerProfile] = useState<SellerProfile | null>(null); // Add sellerProfile state
-  const [loadingSeller, setLoadingSeller] = useState(true); // Add loadingSeller state
+  const [sellerProfile, setSellerProfile] = useState<SellerProfile | null>(null);
+  const [loadingSeller, setLoadingSeller] = useState(true);
 
   useEffect(() => {
     const fetchListingAndFavoriteStatus = async () => {
@@ -81,7 +50,7 @@ export default function ListingDetails() {
 
         if (docSnap.exists()) {
           const rawData = docSnap.data();
-          console.log("Raw listing data from Firestore:", rawData); // Debug log
+          console.log("Raw listing data from Firestore:", rawData);
           
           // Handle different possible field names for seller ID
           const sellerId = rawData.sellerId || 
@@ -93,51 +62,45 @@ export default function ListingDetails() {
           const listingData = { 
             id: docSnap.id, 
             ...rawData,
-            sellerId: sellerId // Ensure sellerId is always set
+            sellerId: sellerId
           } as Listing;
           
-          console.log("Processed listing data:", listingData); // Debug log
+          console.log("Processed listing data:", listingData);
           setListing(listingData);
 
           // Fetch seller profile
-<<<<<<< HEAD
           if (listingData.sellerId) {
             try {
               const userDocRef = doc(db, "users", listingData.sellerId);
-=======
-          if (listingData.sellerId) { // Use sellerId
-            try {
-              const userDocRef = doc(db, "users", listingData.sellerId); // Use sellerId
->>>>>>> 89b431092f6e9437c9f0b6a40210e6a75e273f8c
               const userDocSnap = await getDoc(userDocRef);
               if (userDocSnap.exists()) {
                 setSellerProfile(userDocSnap.data() as SellerProfile);
               } else {
                 // Fallback to listing's seller.name if profile not found
                 setSellerProfile({
-                  name: listingData.seller.name || "Unknown Seller",
-                  avatar: listingData.seller.avatar || undefined,
-                  university: listingData.seller.university || "University Name", // Placeholder
-                  rating: listingData.seller.rating || 0, // Placeholder
+                  name: listingData.seller?.name || "Unknown Seller",
+                  avatar: listingData.seller?.avatar || undefined,
+                  university: listingData.seller?.university || "University Name",
+                  rating: listingData.seller?.rating || 0,
                 });
               }
             } catch (sellerError) {
               console.error("Error fetching seller profile in ListingDetails:", sellerError);
               // Fallback on error
               setSellerProfile({
-                name: listingData.seller.name || "Unknown Seller",
-                avatar: listingData.seller.avatar || undefined,
-                university: listingData.seller.university || "University Name", // Placeholder
-                rating: listingData.seller.rating || 0, // Placeholder
+                name: listingData.seller?.name || "Unknown Seller",
+                avatar: listingData.seller?.avatar || undefined,
+                university: listingData.seller?.university || "University Name",
+                rating: listingData.seller?.rating || 0,
               });
             }
           } else {
             console.warn("listingData.sellerId is missing for listing:", id);
             setSellerProfile({
-              name: listingData.seller.name || "Unknown Seller",
-              avatar: listingData.seller.avatar || undefined,
-              university: listingData.seller.university || "University Name", // Placeholder
-              rating: listingData.seller.rating || 0, // Placeholder
+              name: listingData.seller?.name || "Unknown Seller",
+              avatar: listingData.seller?.avatar || undefined,
+              university: listingData.seller?.university || "University Name",
+              rating: listingData.seller?.rating || 0,
             });
           }
         } else {
@@ -206,20 +169,16 @@ export default function ListingDetails() {
         });
 
         // Create notification for the listing owner
-<<<<<<< HEAD
-        const listingOwnerId = listing?.sellerId; // Use optional chaining
-=======
-        const listingOwnerId = listing?.sellerId; // Use sellerId
->>>>>>> 89b431092f6e9437c9f0b6a40210e6a75e273f8c
-        const currentUser = auth.currentUser; // Get current user
-        if (currentUser && listingOwnerId && listingOwnerId !== currentUser.uid) { // Don't notify self, and ensure listingOwnerId exists
+        const listingOwnerId = listing?.sellerId;
+        const currentUser = auth.currentUser;
+        if (currentUser && listingOwnerId && listingOwnerId !== currentUser.uid) {
           await addDoc(collection(db, "notifications"), {
             userId: listingOwnerId,
             type: "bookmark",
-            message: `Your listing '${listing?.title}' has been bookmarked by ${currentUser.displayName || currentUser.email?.split('@')[0]}!`, // Use optional chaining for listing.title
+            message: `Your listing '${listing?.title}' has been bookmarked by ${currentUser.displayName || currentUser.email?.split('@')[0]}!`,
             read: false,
             createdAt: serverTimestamp(),
-            relatedId: id, // Link to the listing
+            relatedId: id,
           });
         }
       }
@@ -245,11 +204,7 @@ export default function ListingDetails() {
       return;
     }
     if (listing) {
-<<<<<<< HEAD
       navigate("/messages", { state: { sellerId: listing.sellerId, listingId: id } });
-=======
-      navigate("/messages", { state: { sellerId: listing.sellerId, listingId: id } }); // Use sellerId
->>>>>>> 89b431092f6e9437c9f0b6a40210e6a75e273f8c
     }
   };
 
@@ -310,15 +265,15 @@ export default function ListingDetails() {
   }
 
   if (!listing) {
-    return null; // Should not happen if error is handled
+    return null;
   }
 
   // Use sellerProfile for display
-  const displaySellerName = sellerProfile?.name || listing.seller.name; // Use seller.name
-  const displaySellerAvatar = sellerProfile?.avatar || listing.seller.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${listing.seller.userId}`; // Use seller.avatar or seller.userId for fallback
-  const displaySellerUniversity = sellerProfile?.university || listing.seller.university; // Use seller.university
-  const displaySellerRating = sellerProfile?.rating || listing.seller.rating; // Use seller.rating
-  const isService = listing.categories.includes("Services"); // Check if categories array includes "Services"
+  const displaySellerName = sellerProfile?.name || listing.seller?.name || "Unknown Seller";
+  const displaySellerAvatar = sellerProfile?.avatar || listing.seller?.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${listing.seller?.userId || 'unknown'}`;
+  const displaySellerUniversity = sellerProfile?.university || listing.seller?.university || "Unknown University";
+  const displaySellerRating = sellerProfile?.rating || listing.seller?.rating || 0;
+  const isService = listing.category === "Services";
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -359,7 +314,7 @@ export default function ListingDetails() {
                 </Button>
                 <div className="absolute top-4 left-4">
                   <Badge variant="secondary" className="bg-background/90 backdrop-blur-sm font-medium text-base">
-                    {listing.categories.join(', ')} {/* Display categories as comma-separated string */}
+                    {listing.category}
                   </Badge>
                 </div>
               </div>
@@ -396,7 +351,7 @@ export default function ListingDetails() {
                 </div>
                 <div className="text-right">
                   <p className="font-bold text-3xl text-primary-warm">
-                    {isService ? `${listing.price}/hr` : `$${parseFloat(listing.price).toFixed(2)}`} {/* Convert to float before toFixed */}
+                    {isService ? `$${parseFloat(listing.price).toFixed(2)}/hr` : `$${parseFloat(listing.price).toFixed(2)}`}
                   </p>
                   {!isService && (
                     <Badge variant={listing.condition === "New" ? "default" : "outline"} className={cn(
@@ -538,7 +493,7 @@ export default function ListingDetails() {
           listing={{
             id: listing.id,
             title: listing.title,
-            price: listing.price,
+            price: parseFloat(listing.price),
             sellerId: listing.sellerId || '',
             sellerName: displaySellerName,
             category: listing.category,
