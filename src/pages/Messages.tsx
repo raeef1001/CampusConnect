@@ -17,6 +17,14 @@ import { ListingCard } from "@/components/marketplace/ListingCard";
 import { Listing } from "@/types/listing"; 
 import { ListingSelector } from "@/components/marketplace/ListingSelector";
 import { useToast } from "@/hooks/use-toast";
+import { 
+  encryptMessage, 
+  decryptMessage, 
+  encryptImage, 
+  decryptImage, 
+  getOtherParticipant, 
+  isEncryptionSupported 
+} from "@/utils/encryption";
 
 interface Chat {
   id: string;
@@ -25,6 +33,8 @@ interface Chat {
   createdAt: Timestamp | FieldValue;
   updatedAt?: Timestamp | FieldValue;
   listingId?: string; 
+  // Encryption field for last message
+  encryptedLastMessage?: string;
 }
 
 interface Message {
@@ -37,6 +47,10 @@ interface Message {
   cartId?: string;
   paymentStatus?: 'pending' | 'completed' | 'failed';
   createdAt: Timestamp | FieldValue;
+  // Encryption fields
+  encrypted?: boolean;
+  encryptedText?: string;
+  encryptedImage?: string;
 }
 
 interface UserProfile {
@@ -53,6 +67,7 @@ export default function Messages() {
   const [chats, setChats] = useState<Chat[]>([]);
   const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
+  const [decryptedMessages, setDecryptedMessages] = useState<{ [key: string]: { text?: string; image?: string } }>({});
   const [newMessage, setNewMessage] = useState("");
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
@@ -61,7 +76,7 @@ export default function Messages() {
   const [userProfiles, setUserProfiles] = useState<{ [key: string]: UserProfile }>({});
   const [fetchedListings, setFetchedListings] = useState<{ [key: string]: Listing }>({});
   const [isListingSelectorOpen, setIsListingSelectorOpen] = useState(false);
-  const [shouldSendMessage, setShouldSendMessage] = useState(false); // Added
+  const [shouldSendMessage, setShouldSendMessage] = useState(false);
 
   const { toast } = useToast();
 
@@ -69,7 +84,7 @@ export default function Messages() {
   const { chatId } = useParams<{ chatId: string }>();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const initialMessageRef = useRef<string | null>(null); // Added
+  const initialMessageRef = useRef<string | null>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -91,6 +106,41 @@ export default function Messages() {
       reader.onload = () => resolve(reader.result as string);
       reader.onerror = (error) => reject(error);
     });
+  };
+
+  // Decrypt messages when they are loaded
+  const decryptMessagesAsync = async (messages: Message[], currentUserUid: string, chatParticipants: string[]) => {
+    if (!isEncryptionSupported()) return;
+
+    const otherParticipant = getOtherParticipant(chatParticipants, currentUserUid);
+    if (!otherParticipant) return;
+
+    const newDecryptedMessages: { [key: string]: { text?: string; image?: string } } = {};
+
+    for (const message of messages) {
+      if (message.encrypted) {
+        try {
+          if (message.encryptedText) {
+            const decryptedText = await decryptMessage(message.encryptedText, message.senderId, otherParticipant);
+            newDecryptedMessages[message.id] = { 
+              ...newDecryptedMessages[message.id], 
+              text: decryptedText 
+            };
+          }
+          if (message.encryptedImage) {
+            const decryptedImage = await decryptImage(message.encryptedImage, message.senderId, otherParticipant);
+            newDecryptedMessages[message.id] = { 
+              ...newDecryptedMessages[message.id], 
+              image: decryptedImage 
+            };
+          }
+        } catch (error) {
+          console.error('Failed to decrypt message:', error);
+        }
+      }
+    }
+
+    setDecryptedMessages(prev => ({ ...prev, ...newDecryptedMessages }));
   };
 
   useEffect(() => {
@@ -243,7 +293,6 @@ export default function Messages() {
     }
   }, [selectedChat, currentUser, newMessage]);
 
-
   useEffect(() => {
     if (selectedChat) {
       setLoadingMessages(true);
@@ -260,6 +309,11 @@ export default function Messages() {
         setMessages(newMessages);
         setLoadingMessages(false);
         scrollToBottom();
+
+        // Decrypt messages if current user is available
+        if (currentUser) {
+          await decryptMessagesAsync(newMessages, currentUser.uid, selectedChat.participants);
+        }
 
         const listingIdsInMessagesToFetch = new Set<string>();
         newMessages.forEach(message => {
@@ -327,7 +381,7 @@ export default function Messages() {
     } else {
       setMessages([]);
     }
-  }, [selectedChat, userProfiles]);
+  }, [selectedChat, userProfiles, currentUser]);
 
   const handleSendMessage = async () => {
     if ((newMessage.trim() === "" && !selectedImage && !selectedListing) || !selectedChat || !currentUser) {
@@ -335,19 +389,67 @@ export default function Messages() {
     }
 
     try {
+      const otherParticipant = getOtherParticipant(selectedChat.participants, currentUser.uid);
+      if (!otherParticipant) {
+        toast({
+          title: "Error",
+          description: "Could not find chat partner.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const messagePayload: Partial<Omit<Message, 'id' | 'createdAt'>> & { createdAt: FieldValue } = {
         senderId: currentUser.uid,
         createdAt: serverTimestamp(),
+        encrypted: isEncryptionSupported(),
       };
 
+      let lastMessageText = "Message";
+
+      // Handle text encryption
       if (newMessage.trim() !== "") {
-        messagePayload.text = newMessage;
+        if (isEncryptionSupported()) {
+          try {
+            const encryptedText = await encryptMessage(newMessage.trim(), currentUser.uid, otherParticipant);
+            messagePayload.encryptedText = encryptedText;
+            lastMessageText = "Encrypted message";
+          } catch (error) {
+            console.error("Text encryption failed:", error);
+            // Fallback to unencrypted
+            messagePayload.text = newMessage.trim();
+            messagePayload.encrypted = false;
+            lastMessageText = newMessage.trim();
+          }
+        } else {
+          messagePayload.text = newMessage.trim();
+          messagePayload.encrypted = false;
+          lastMessageText = newMessage.trim();
+        }
       }
 
+      // Handle image encryption
       if (selectedImage) {
         try {
           const base64Image = await fileToBase64(selectedImage);
-          messagePayload.image = base64Image;
+          
+          if (isEncryptionSupported()) {
+            try {
+              const encryptedImage = await encryptImage(base64Image, currentUser.uid, otherParticipant);
+              messagePayload.encryptedImage = encryptedImage;
+              lastMessageText = "Sent an encrypted image";
+            } catch (error) {
+              console.error("Image encryption failed:", error);
+              // Fallback to unencrypted
+              messagePayload.image = base64Image;
+              messagePayload.encrypted = false;
+              lastMessageText = "Sent an image";
+            }
+          } else {
+            messagePayload.image = base64Image;
+            messagePayload.encrypted = false;
+            lastMessageText = "Sent an image";
+          }
         } catch (error) {
           console.error("Error converting image to Base64:", error);
           toast({
@@ -355,29 +457,36 @@ export default function Messages() {
             description: "Could not convert image to Base64. Please try again.",
             variant: "destructive",
           });
-          return; // Stop sending message if image conversion fails
+          return;
         }
       }
 
       if (selectedListing) {
         messagePayload.listingId = selectedListing.id;
+        lastMessageText = `Shared: ${selectedListing.title}`;
       }
 
       await addDoc(collection(db, "chats", selectedChat.id, "messages"), messagePayload);
 
-      let lastMessageText = "Message";
-        if (selectedListing) {
-            lastMessageText = `Shared: ${selectedListing.title}`;
-        } else if (selectedImage) {
-            lastMessageText = "Sent an image";
-        } else if (newMessage.trim()) {
-            lastMessageText = newMessage.trim();
-        }
-      
-      await updateDoc(doc(db, "chats", selectedChat.id), {
-        lastMessage: lastMessageText,
+      // Update chat with encrypted last message if encryption is supported
+      const chatUpdateData: any = {
         updatedAt: serverTimestamp(),
-      });
+      };
+
+      if (isEncryptionSupported() && lastMessageText !== `Shared: ${selectedListing?.title}`) {
+        try {
+          const encryptedLastMessage = await encryptMessage(lastMessageText, currentUser.uid, otherParticipant);
+          chatUpdateData.encryptedLastMessage = encryptedLastMessage;
+          chatUpdateData.lastMessage = "Encrypted message";
+        } catch (error) {
+          console.error("Failed to encrypt last message:", error);
+          chatUpdateData.lastMessage = lastMessageText;
+        }
+      } else {
+        chatUpdateData.lastMessage = lastMessageText;
+      }
+
+      await updateDoc(doc(db, "chats", selectedChat.id), chatUpdateData);
 
       const chatPartner = getChatPartner(selectedChat);
       if (chatPartner && currentUser) {
@@ -395,7 +504,7 @@ export default function Messages() {
       setSelectedListing(null);
       toast({
         title: "Message sent!",
-        description: "Your message has been successfully sent.",
+        description: isEncryptionSupported() ? "Your encrypted message has been sent." : "Your message has been sent.",
       });
     } catch (error) {
       console.error("Error sending message:", error);
@@ -415,26 +524,38 @@ export default function Messages() {
     setIsListingSelectorOpen(false);
   };
 
-  // These handlers are kept for potential future use or if ListingCard itself has these actions.
-  // For now, the buttons rendered by Messages.tsx for shared listings will be removed.
   const handleAddToCart = async (listingId: string) => {
     if (!currentUser || !listingId) return;
     console.log("Add to cart:", listingId);
     alert(`Item with ID ${listingId} added to cart (dummy action)!`);
-    // Add actual cart logic if needed
   };
 
   const handlePlaceOrder = async (listingId: string) => {
     if (!currentUser || !listingId) return;
     console.log("Place order for:", listingId);
     alert(`Order placed for item ID ${listingId} (dummy action)!`);
-    // Add actual order logic if needed
   };
 
   const getChatPartner = (chat: Chat | null): UserProfile | null => {
     if (!chat || !currentUser) return null;
     const partnerUid = chat.participants.find(uid => uid !== currentUser.uid);
     return partnerUid ? userProfiles[partnerUid] : null;
+  };
+
+  // Get display text for message (decrypted if available, fallback to original)
+  const getMessageText = (message: Message): string | undefined => {
+    if (message.encrypted && decryptedMessages[message.id]?.text) {
+      return decryptedMessages[message.id].text;
+    }
+    return message.text;
+  };
+
+  // Get display image for message (decrypted if available, fallback to original)
+  const getMessageImage = (message: Message): string | undefined => {
+    if (message.encrypted && decryptedMessages[message.id]?.image) {
+      return decryptedMessages[message.id].image;
+    }
+    return message.image;
   };
 
   return (
@@ -456,6 +577,9 @@ export default function Messages() {
               )}>
                 <div className="p-4 border-b">
                   <h2 className="text-xl font-semibold">Conversations</h2>
+                  {isEncryptionSupported() && (
+                    <p className="text-xs text-muted-foreground mt-1">🔒 End-to-end encrypted</p>
+                  )}
                 </div>
                 <div className="flex-1 overflow-y-auto">
                   {loadingChats ? (
@@ -520,9 +644,14 @@ export default function Messages() {
                         <AvatarImage src={getChatPartner(selectedChat)?.avatar || "/placeholder.svg"} alt={getChatPartner(selectedChat)?.name || "User"}/>
                         <AvatarFallback>{getChatPartner(selectedChat)?.name?.split(' ').map(n => n[0]).join('').toUpperCase() || <User className="h-5 w-5" />}</AvatarFallback>
                       </Avatar>
-                      <h2 className="text-lg md:text-xl font-semibold ml-3">
-                        {getChatPartner(selectedChat)?.name || "Unknown User"}
-                      </h2>
+                      <div className="ml-3 flex-1">
+                        <h2 className="text-lg md:text-xl font-semibold">
+                          {getChatPartner(selectedChat)?.name || "Unknown User"}
+                        </h2>
+                        {isEncryptionSupported() && (
+                          <p className="text-xs text-muted-foreground">🔒 Messages are encrypted</p>
+                        )}
+                      </div>
                     </div>
                     <div className="flex-1 p-4 overflow-y-auto space-y-4 bg-muted/30">
                       {loadingMessages ? (
@@ -534,42 +663,46 @@ export default function Messages() {
                          ))}
                        </div>
                       ) : messages.length > 0 ? (
-                        messages.map((message) => (
-                          <div
-                            key={message.id}
-                            className={cn("flex", message.senderId === currentUser.uid ? "justify-end" : "justify-start")}
-                          >
-                            <div className={cn(
-                              "max-w-[80%] md:max-w-[70%] p-3 rounded-lg shadow-sm",
-                              message.senderId === currentUser.uid
-                                ? "bg-primary text-primary-foreground rounded-br-none"
-                                : "bg-card border rounded-bl-none"
-                            )}>
-                              {message.text && <p className="whitespace-pre-wrap break-words text-sm md:text-base">{message.text}</p>}
-                              {message.image && (
-                                <img src={message.image} alt="Shared content" className="max-w-full h-auto rounded-md mt-2 cursor-pointer object-contain max-h-64" onClick={() => window.open(message.image, '_blank')} />
-                              )}
-                              {message.listingId && fetchedListings[message.listingId] && (
-                                <div className="mt-2 p-2 bg-background rounded-md border">
-                                  <p className="font-semibold mb-1 text-xs md:text-sm">Shared Product:</p>
-                                  <Link 
-                                    to={`/product/${message.listingId}`}
-                                    className="block hover:bg-muted/30 p-1 rounded-md transition-colors -m-1"
-                                    aria-label={`View details for ${fetchedListings[message.listingId].title}`}
-                                  >
-                                    <ListingCard {...fetchedListings[message.listingId]} />
-                                  </Link>
-                                  {/* ***** MODIFICATION: Removed Add to Cart and Place Order buttons from here ***** */}
-                                </div>
-                              )}
-                              <span className="block text-xs text-right mt-1 opacity-70">
-                                {message.createdAt && (message.createdAt as Timestamp).seconds 
-                                  ? new Date((message.createdAt as Timestamp).seconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
-                                  : 'Sending...'}
-                              </span>
+                        messages.map((message) => {
+                          const displayText = getMessageText(message);
+                          const displayImage = getMessageImage(message);
+                          
+                          return (
+                            <div
+                              key={message.id}
+                              className={cn("flex", message.senderId === currentUser.uid ? "justify-end" : "justify-start")}
+                            >
+                              <div className={cn(
+                                "max-w-[80%] md:max-w-[70%] p-3 rounded-lg shadow-sm",
+                                message.senderId === currentUser.uid
+                                  ? "bg-primary text-primary-foreground rounded-br-none"
+                                  : "bg-card border rounded-bl-none"
+                              )}>
+                                {displayText && <p className="whitespace-pre-wrap break-words text-sm md:text-base">{displayText}</p>}
+                                {displayImage && (
+                                  <img src={displayImage} alt="Shared content" className="max-w-full h-auto rounded-md mt-2 cursor-pointer object-contain max-h-64" onClick={() => window.open(displayImage, '_blank')} />
+                                )}
+                                {message.listingId && fetchedListings[message.listingId] && (
+                                  <div className="mt-2 p-2 bg-background rounded-md border">
+                                    <p className="font-semibold mb-1 text-xs md:text-sm">Shared Product:</p>
+                                    <Link 
+                                      to={`/product/${message.listingId}`}
+                                      className="block hover:bg-muted/30 p-1 rounded-md transition-colors -m-1"
+                                      aria-label={`View details for ${fetchedListings[message.listingId].title}`}
+                                    >
+                                      <ListingCard {...fetchedListings[message.listingId]} />
+                                    </Link>
+                                  </div>
+                                )}
+                                <span className="block text-xs text-right mt-1 opacity-70">
+                                  {message.createdAt && (message.createdAt as Timestamp).seconds 
+                                    ? new Date((message.createdAt as Timestamp).seconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
+                                    : 'Sending...'}
+                                </span>
+                              </div>
                             </div>
-                          </div>
-                        ))
+                          );
+                        })
                       ) : (
                         <div className="text-center text-muted-foreground h-full flex flex-col justify-center items-center">
                           <MessageSquare className="h-12 w-12 text-border mb-3"/>
