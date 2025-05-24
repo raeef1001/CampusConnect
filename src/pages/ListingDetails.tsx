@@ -14,7 +14,39 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/components/ui/use-toast";
 import { reverseGeocode, getLocationName } from "@/utils/geocoding";
 import LocationDisplay from "@/components/LocationDisplay";
+<<<<<<< HEAD
+import BidDialog from "@/components/ui/bid-dialog";
+
+interface LocationData {
+  id: string;
+  lat: number;
+  lng: number;
+  type: 'main' | 'delivery';
+  name?: string;
+}
+
+interface Listing {
+  id: string;
+  title: string;
+  description: string;
+  price: number;
+  category: string;
+  condition: string;
+  imageUrl: string;
+  sellerId: string;
+  userEmail: string;
+  locations?: LocationData[];
+  deliveryRadius?: number;
+  isAvailable?: boolean;
+  availabilityStatus?: 'available' | 'sold' | 'reserved' | 'unavailable';
+  createdAt: {
+    seconds: number;
+    nanoseconds: number;
+  };
+}
+=======
 import { Listing, LocationData } from "@/types/listing.d";
+>>>>>>> 89b431092f6e9437c9f0b6a40210e6a75e273f8c
 
 interface SellerProfile { // Define SellerProfile interface
   name: string;
@@ -31,6 +63,7 @@ export default function ListingDetails() {
   const [error, setError] = useState<string | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isFavorited, setIsFavorited] = useState(false);
+  const [showBidDialog, setShowBidDialog] = useState(false);
   const { toast } = useToast();
   const [sellerProfile, setSellerProfile] = useState<SellerProfile | null>(null); // Add sellerProfile state
   const [loadingSeller, setLoadingSeller] = useState(true); // Add loadingSeller state
@@ -47,13 +80,35 @@ export default function ListingDetails() {
         const docSnap = await getDoc(docRef);
 
         if (docSnap.exists()) {
-          const listingData = { id: docSnap.id, ...docSnap.data() } as Listing;
+          const rawData = docSnap.data();
+          console.log("Raw listing data from Firestore:", rawData); // Debug log
+          
+          // Handle different possible field names for seller ID
+          const sellerId = rawData.sellerId || 
+                           rawData.userId || 
+                           rawData.createdBy || 
+                           rawData.seller?.userId || 
+                           '';
+          
+          const listingData = { 
+            id: docSnap.id, 
+            ...rawData,
+            sellerId: sellerId // Ensure sellerId is always set
+          } as Listing;
+          
+          console.log("Processed listing data:", listingData); // Debug log
           setListing(listingData);
 
           // Fetch seller profile
+<<<<<<< HEAD
+          if (listingData.sellerId) {
+            try {
+              const userDocRef = doc(db, "users", listingData.sellerId);
+=======
           if (listingData.sellerId) { // Use sellerId
             try {
               const userDocRef = doc(db, "users", listingData.sellerId); // Use sellerId
+>>>>>>> 89b431092f6e9437c9f0b6a40210e6a75e273f8c
               const userDocSnap = await getDoc(userDocRef);
               if (userDocSnap.exists()) {
                 setSellerProfile(userDocSnap.data() as SellerProfile);
@@ -151,7 +206,11 @@ export default function ListingDetails() {
         });
 
         // Create notification for the listing owner
+<<<<<<< HEAD
+        const listingOwnerId = listing?.sellerId; // Use optional chaining
+=======
         const listingOwnerId = listing?.sellerId; // Use sellerId
+>>>>>>> 89b431092f6e9437c9f0b6a40210e6a75e273f8c
         const currentUser = auth.currentUser; // Get current user
         if (currentUser && listingOwnerId && listingOwnerId !== currentUser.uid) { // Don't notify self, and ensure listingOwnerId exists
           await addDoc(collection(db, "notifications"), {
@@ -186,8 +245,25 @@ export default function ListingDetails() {
       return;
     }
     if (listing) {
+<<<<<<< HEAD
+      navigate("/messages", { state: { sellerId: listing.sellerId, listingId: id } });
+=======
       navigate("/messages", { state: { sellerId: listing.sellerId, listingId: id } }); // Use sellerId
+>>>>>>> 89b431092f6e9437c9f0b6a40210e6a75e273f8c
     }
+  };
+
+  const handleBid = () => {
+    const user = auth.currentUser;
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please log in to place bids.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setShowBidDialog(true);
   };
 
   if (loading) {
@@ -411,11 +487,18 @@ export default function ListingDetails() {
                 {/* Contact button - hide for listing owner and adjust based on availability */}
                 {(!auth.currentUser || listing.sellerId !== auth.currentUser.uid) && (
                   <div className="space-y-2">
-                    {listing.isAvailable !== false && listing.availabilityStatus === 'available' ? (
-                      <Button variant="primary-warm" className="w-full gap-2 text-lg py-6" onClick={handleContactSeller}>
-                        <MessageSquare className="h-5 w-5" />
-                        Contact Seller
-                      </Button>
+                    {(listing.isAvailable !== false && (listing.availabilityStatus === 'available' || !listing.availabilityStatus)) ? (
+                      <div className="space-y-2">
+                        <Button variant="primary-warm" className="w-full gap-2 text-lg py-6" onClick={handleContactSeller}>
+                          <MessageSquare className="h-5 w-5" />
+                          Contact Seller
+                        </Button>
+                        {!isService && (
+                          <Button variant="outline" className="w-full gap-2 text-lg py-6 border-green-600 text-green-600 hover:bg-green-50" onClick={handleBid}>
+                            💰 Place Bid
+                          </Button>
+                        )}
+                      </div>
                     ) : (
                       <div className="space-y-2">
                         <Button 
@@ -427,11 +510,13 @@ export default function ListingDetails() {
                           {listing.availabilityStatus === 'sold' && 'Item Sold - Contact Unavailable'}
                           {listing.availabilityStatus === 'reserved' && 'Item Reserved - Contact Unavailable'}
                           {listing.availabilityStatus === 'unavailable' && 'Item Unavailable - Contact Unavailable'}
+                          {!listing.availabilityStatus && 'Contact Unavailable'}
                         </Button>
                         <p className="text-sm text-center text-gray-600">
                           {listing.availabilityStatus === 'sold' && 'This item has been sold and is no longer available.'}
                           {listing.availabilityStatus === 'reserved' && 'This item is currently reserved for another buyer.'}
                           {listing.availabilityStatus === 'unavailable' && 'This item is temporarily unavailable.'}
+                          {!listing.availabilityStatus && 'This item is currently unavailable.'}
                         </p>
                       </div>
                     )}
@@ -444,6 +529,24 @@ export default function ListingDetails() {
       </div>
       
       <FloatingChat />
+      
+      {/* Bid Dialog */}
+      {listing && (
+        <BidDialog
+          isOpen={showBidDialog}
+          onClose={() => setShowBidDialog(false)}
+          listing={{
+            id: listing.id,
+            title: listing.title,
+            price: listing.price,
+            sellerId: listing.sellerId || '',
+            sellerName: displaySellerName,
+            category: listing.category,
+            condition: listing.condition,
+            imageUrl: listing.imageUrl,
+          }}
+        />
+      )}
     </div>
   );
 }

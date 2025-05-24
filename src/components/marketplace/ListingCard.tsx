@@ -12,6 +12,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { addNotification } from "@/utils/notifications"; // Import addNotification utility
 import { getLocationName } from "@/utils/geocoding";
+import BidDialog from "@/components/ui/bid-dialog";
 
 interface SellerProfile {
   name: string;
@@ -48,6 +49,8 @@ interface ListingCardProps {
   deliveryRadius?: number;
   isAvailable?: boolean;
   availabilityStatus?: 'available' | 'sold' | 'reserved' | 'unavailable';
+  // Add the actual listing userId for bidding
+  listingUserId?: string;
 }
 
 export function ListingCard({ 
@@ -63,9 +66,11 @@ export function ListingCard({
   locations = [],
   deliveryRadius = 0,
   isAvailable = true,
-  availabilityStatus = 'available'
+  availabilityStatus = 'available',
+  listingUserId
 }: ListingCardProps) {
   const [isFavorited, setIsFavorited] = useState(false);
+  const [showBidDialog, setShowBidDialog] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
   // sellerProfile and loadingSeller states are no longer needed as seller prop is complete
@@ -127,7 +132,7 @@ export function ListingCard({
         });
 
         // Create notification for the listing owner using the utility function
-        const listingOwnerId = seller.userId;
+        const listingOwnerId = listingUserId || seller.userId;
         if (auth.currentUser && listingOwnerId !== auth.currentUser.uid) { // Don't notify self
           await addNotification({
             userId: listingOwnerId,
@@ -159,7 +164,21 @@ export function ListingCard({
       });
       return;
     }
-    navigate("/messages", { state: { sellerId: seller.userId, listingId: id } });
+    navigate("/messages", { state: { sellerId: listingUserId || seller.userId, listingId: id } });
+  };
+
+  const handleBid = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const user = auth.currentUser;
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please log in to place bids.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setShowBidDialog(true);
   };
 
   return (
@@ -293,11 +312,18 @@ export function ListingCard({
         </CardContent>
         
         <CardFooter className="pt-0 px-4 pb-4">
-          {isAvailable !== false && availabilityStatus === 'available' ? (
-            <Button className="w-full gap-2 text-base py-5 bg-warm-50 hover:bg-warm-100 text-warm-700" variant="ghost" onClick={handleContactSeller}>
-              <MessageSquare className="h-4 w-4" />
-              Contact Seller
-            </Button>
+          {(isAvailable !== false && (availabilityStatus === 'available' || !availabilityStatus)) ? (
+            <div className="w-full space-y-2">
+              <Button className="w-full gap-2 text-sm py-3 bg-warm-50 hover:bg-warm-100 text-warm-700" variant="ghost" onClick={handleContactSeller}>
+                <MessageSquare className="h-4 w-4" />
+                Contact Seller
+              </Button>
+              {!isService && (
+                <Button className="w-full gap-2 text-sm py-3 bg-green-50 hover:bg-green-100 text-green-700" variant="ghost" onClick={handleBid}>
+                  💰 Place Bid
+                </Button>
+              )}
+            </div>
           ) : (
             <Button 
               className="w-full gap-2 text-base py-5 cursor-not-allowed opacity-60" 
@@ -312,6 +338,22 @@ export function ListingCard({
             </Button>
           )}
         </CardFooter>
+
+        {/* Bid Dialog */}
+        <BidDialog
+          isOpen={showBidDialog}
+          onClose={() => setShowBidDialog(false)}
+          listing={{
+            id,
+            title,
+            price: parseFloat(price.replace('$', '')),
+            sellerId: listingUserId || seller.userId || seller?.userId || '',
+            sellerName: seller.name,
+            category,
+            condition,
+            imageUrl: image,
+          }}
+        />
       </Card>
     </Link>
   );
