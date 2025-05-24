@@ -12,7 +12,8 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
-  Bell // Added Bell import
+  Bell, // Added Bell import
+  Bookmark // Added Bookmark import
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useState } from "react";
@@ -26,7 +27,9 @@ interface SidebarProps {
 
 const menuItems = [
   { icon: Home, label: "Dashboard", href: "/dashboard" },
-  { icon: Package, label: "My Listings", href: "/listings" },
+  { icon: Package, label: "All Listings", href: "/listings" },
+  { icon: Package, label: "My Listings", href: "/listings?filter=my-listings" },
+  { icon: Bookmark, label: "Bookmarked Products", href: "/listings?filter=bookmarked-listings" }, // Added Bookmarked Products
   { icon: MessageSquare, label: "Messages", href: "/messages", badge: 2 },
   { icon: User, label: "Profile", href: "/profile" },
   { icon: Bell, label: "Notifications", href: "/notifications", badge: 3 }, // Added Notifications
