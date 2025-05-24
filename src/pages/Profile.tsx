@@ -47,6 +47,8 @@ export default function Profile() {
   const [editBio, setEditBio] = useState('');
   const [editPhone, setEditPhone] = useState('');
   const [editLocation, setEditLocation] = useState('');
+  const [editAvatarFile, setEditAvatarFile] = useState<File | null>(null); // For profile image upload
+  const [uploadingAvatar, setUploadingAvatar] = useState(false); // Loading state for avatar upload
 
   const { toast } = useToast();
 
@@ -114,6 +116,52 @@ export default function Profile() {
     }
 
     setLoading(true);
+    setUploadingAvatar(true); // Start avatar upload loading
+
+    let avatarUrl = userProfile?.avatar || "/placeholder.svg"; // Default to current or placeholder
+
+    if (editAvatarFile) {
+      try {
+        const CLOUDINARY_CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+        const CLOUDINARY_UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
+
+        if (!CLOUDINARY_CLOUD_NAME || !CLOUDINARY_UPLOAD_PRESET) {
+          throw new Error("Cloudinary environment variables are not set.");
+        }
+
+        const formData = new FormData();
+        formData.append('file', editAvatarFile);
+        formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+
+        const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error?.message || "Cloudinary upload failed.");
+        }
+
+        const data = await response.json();
+        avatarUrl = data.secure_url;
+        toast({
+          title: "Image Uploaded",
+          description: "Profile image uploaded successfully to Cloudinary.",
+        });
+      } catch (error) {
+        console.error("Error uploading avatar to Cloudinary: ", error);
+        toast({
+          title: "Error",
+          description: `Failed to upload profile image: ${error instanceof Error ? error.message : String(error)}.`,
+          variant: "destructive",
+        });
+        setLoading(false);
+        setUploadingAvatar(false);
+        return; // Stop the process if avatar upload fails
+      }
+    }
+
     try {
       const userDocRef = doc(db, "users", auth.currentUser.uid);
       const updatedData = {
@@ -121,6 +169,7 @@ export default function Profile() {
         university: editUniversity,
         major: editMajor,
         bio: editBio,
+        avatar: avatarUrl, // Use the uploaded avatar URL
         contact: {
           email: auth.currentUser.email, // Keep current user email
           phone: editPhone,
@@ -146,6 +195,7 @@ export default function Profile() {
       });
     } finally {
       setLoading(false);
+      setUploadingAvatar(false); // End avatar upload loading
     }
   };
 
@@ -265,10 +315,20 @@ export default function Profile() {
                         <Label htmlFor="location">Location (Optional)</Label>
                         <Input id="location" value={editLocation} onChange={(e) => setEditLocation(e.target.value)} />
                       </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="avatar">Profile Image (Optional)</Label>
+                        <Input 
+                          id="avatar" 
+                          type="file" 
+                          accept="image/*"
+                          onChange={(e) => setEditAvatarFile(e.target.files ? e.target.files[0] : null)}
+                        />
+                        {editAvatarFile && <p className="text-sm text-muted-foreground">Selected: {editAvatarFile.name}</p>}
+                      </div>
                     </div>
                     <DialogFooter>
-                      <Button type="submit" onClick={handleSaveProfile} disabled={loading}>
-                        {loading ? "Saving..." : "Save changes"}
+                      <Button type="submit" onClick={handleSaveProfile} disabled={loading || uploadingAvatar}>
+                        {loading || uploadingAvatar ? (uploadingAvatar ? "Uploading Image..." : "Saving...") : "Save changes"}
                       </Button>
                     </DialogFooter>
                   </DialogContent>
