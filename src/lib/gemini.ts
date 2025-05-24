@@ -12,32 +12,15 @@ const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
 export { model };
 
-// Interface for listing data
-export interface Listing {
-  id: string;
-  title: string;
-  description: string;
-  price: number;
-  category: string;
-  condition: string;
-  imageUrl: string;
-  userId: string;
-  userEmail: string;
-  createdAt: any;
-  seller?: {
-    name: string;
-    avatar?: string;
-    university: string;
-    rating: number;
-    userId: string;
-  };
-}
+// Import the Listing interface from types
+import { Listing } from "@/types/listing";
 
-// Function to generate AI response about listings
+// Enhanced function to generate AI response about listings with product recommendations
 export async function generateListingResponse(userMessage: string, listings: Listing[]) {
   try {
     // Create a context about available listings
     const listingsContext = listings.map(listing => ({
+      id: listing.id,
       title: listing.title,
       description: listing.description,
       price: listing.price,
@@ -62,7 +45,18 @@ Please provide a helpful response about the available listings. You can:
 - Suggest alternatives if exact matches aren't found
 - Answer general questions about the marketplace
 
+IMPORTANT FORMATTING RULES:
+- DO NOT use any markdown formatting (no asterisks, underscores, or other markdown symbols)
+- Use plain text only
+- When recommending specific products, include the listing ID in your response using this format: [LISTING:id] where 'id' is the actual listing ID
+- Keep responses concise and precise
+- Use simple, clear language without special formatting
+
+Example response format: "I found a red t-shirt [LISTING:abc123] that matches your request. It's in like new condition and priced at $10."
+
 Keep your response conversational, helpful, and focused on the available listings. If the user asks about something not available in the listings, suggest they create a listing request or check back later.
+
+If you're recommending multiple products, mention the most relevant ones and include their listing IDs.
 `;
 
     const result = await model.generateContent(prompt);
@@ -72,6 +66,22 @@ Keep your response conversational, helpful, and focused on the available listing
     console.error('Error generating AI response:', error);
     return "I'm sorry, I'm having trouble processing your request right now. Please try again later.";
   }
+}
+
+// Function to extract listing IDs from AI response
+export function extractListingIds(text: string): string[] {
+  const regex = /\[LISTING:([^\]]+)\]/g;
+  const matches = [];
+  let match;
+  while ((match = regex.exec(text)) !== null) {
+    matches.push(match[1]);
+  }
+  return matches;
+}
+
+// Function to get listings by IDs
+export function getListingsByIds(listingIds: string[], allListings: Listing[]): Listing[] {
+  return allListings.filter(listing => listingIds.includes(listing.id));
 }
 
 // Interface for image analysis result
