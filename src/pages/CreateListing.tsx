@@ -15,6 +15,7 @@ import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, Sparkles, MapPin } from 'lucide-react';
 import { db, auth, storage } from '@/lib/firebase';
 import { collection, addDoc, serverTimestamp, doc, getDoc } from 'firebase/firestore';
+import { dbRateLimiter } from '@/lib/rateLimiter';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useToast } from '@/components/ui/use-toast';
 import { ImageAnalysisResult } from '@/lib/gemini';
@@ -130,7 +131,7 @@ export default function CreateListing() {
 
     try {
       const userDocRef = doc(db, "users", user.uid);
-      const userDocSnap = await getDoc(userDocRef);
+      const userDocSnap = await dbRateLimiter.execute(() => getDoc(userDocRef));
 
       if (userDocSnap.exists()) {
         const userData = userDocSnap.data();
@@ -154,7 +155,7 @@ export default function CreateListing() {
       : "";
 
     try {
-      await addDoc(collection(db, "listings"), {
+      await dbRateLimiter.execute(() => addDoc(collection(db, "listings"), {
         title,
         description,
         price: parseFloat(price),
@@ -171,7 +172,7 @@ export default function CreateListing() {
         seller: sellerProfile, // Add the complete seller profile
         createdAt: serverTimestamp(),
         aiGenerated: aiAnalyzed, // Track if listing was AI-generated
-      });
+      }));
 
       toast({
         title: "Success",

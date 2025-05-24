@@ -15,12 +15,18 @@ export interface Listing {
   image: string;
   imageUrl: string; // Add imageUrl property for database compatibility
   sellerId: string;
+<<<<<<< HEAD
 
   userId?: string; // Optional fallback field for seller ID
   createdBy?: string; // Optional fallback field for seller ID
   category: string;
 
   categories: string[]; // Changed to array of strings
+=======
+  userId?: string; // Optional fallback field for seller ID
+  createdBy?: string; // Optional fallback field for seller ID
+  category: string;
+>>>>>>> 6d5a776e3b0f50dc41009ebd9eec322ff44ed963
   condition: string;
   location: string; // Keep for backward compatibility
   locations?: LocationData[]; // New multi-location support
