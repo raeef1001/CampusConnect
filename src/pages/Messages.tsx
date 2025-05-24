@@ -5,7 +5,6 @@ import { FloatingChat } from "@/components/ui/floating-chat";
 import { Link, useLocation, useParams } from "react-router-dom";
 import { auth, db, storage } from "@/lib/firebase";
 import { collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, getDocs, doc, getDoc, updateDoc, Timestamp, FieldValue } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Send, User, MessageSquare, Image as ImageIcon, ShoppingCart, DollarSign, X } from "lucide-react"; 
@@ -17,6 +16,7 @@ import { addNotification } from "@/utils/notifications";
 import { ListingCard } from "@/components/marketplace/ListingCard";
 import { Listing } from "@/types/listing"; 
 import { ListingSelector } from "@/components/marketplace/ListingSelector";
+import { useToast } from "@/hooks/use-toast";
 
 interface Chat {
   id: string;
@@ -62,6 +62,8 @@ export default function Messages() {
   const [fetchedListings, setFetchedListings] = useState<{ [key: string]: Listing }>({});
   const [isListingSelectorOpen, setIsListingSelectorOpen] = useState(false);
 
+  const { toast } = useToast();
+
   const location = useLocation();
   const { chatId } = useParams<{ chatId: string }>();
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -75,14 +77,18 @@ export default function Messages() {
     if (event.target.files && event.target.files[0]) {
       setSelectedImage(event.target.files[0]);
       setSelectedListing(null);
+    } else {
+      console.log("No image selected.");
     }
   };
 
-  const uploadImage = async (imageFile: File) => {
-    if (!currentUser) return null;
-    const storageRef = ref(storage, `chat_images/${currentUser.uid}/${imageFile.name}_${Date.now()}`);
-    await uploadBytes(storageRef, imageFile);
-    return getDownloadURL(storageRef);
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = (error) => reject(error);
+    });
   };
 
   useEffect(() => {
@@ -288,9 +294,17 @@ export default function Messages() {
       }
 
       if (selectedImage) {
-        const uploadedImageUrl = await uploadImage(selectedImage);
-        if (uploadedImageUrl) {
-          messagePayload.image = uploadedImageUrl;
+        try {
+          const base64Image = await fileToBase64(selectedImage);
+          messagePayload.image = base64Image;
+        } catch (error) {
+          console.error("Error converting image to Base64:", error);
+          toast({
+            title: "Image conversion failed",
+            description: "Could not convert image to Base64. Please try again.",
+            variant: "destructive",
+          });
+          return; // Stop sending message if image conversion fails
         }
       }
 
@@ -328,8 +342,17 @@ export default function Messages() {
       setSelectedImage(null);
       if(fileInputRef.current) fileInputRef.current.value = "";
       setSelectedListing(null);
+      toast({
+        title: "Message sent!",
+        description: "Your message has been successfully sent.",
+      });
     } catch (error) {
       console.error("Error sending message:", error);
+      toast({
+        title: "Failed to send message",
+        description: "There was an error sending your message. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
