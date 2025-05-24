@@ -208,7 +208,9 @@ export default function ListingDetails() {
       return;
     }
     if (listing) {
-      navigate("/messages", { state: { sellerId: listing.sellerId, listingId: id } });
+      const productLink = `${window.location.origin}/listings/${id}`;
+      const initialMessage = `Hi, I'm interested in your listing: ${productLink}`;
+      navigate("/messages", { state: { sellerId: listing.sellerId, listingId: id, initialMessage: initialMessage } });
     }
   };
 
@@ -390,7 +392,6 @@ export default function ListingDetails() {
                     <LocationDisplay 
                       locations={listing.locations}
                       deliveryRadius={listing.deliveryRadius}
-                      showFullAddress={true}
                     />
                   </div>
                 )}
