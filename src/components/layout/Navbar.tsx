@@ -14,6 +14,11 @@ import { Bell, Search, Plus, MessageSquare, User, Settings, LogOut } from "lucid
 import { Badge } from "@/components/ui/badge";
 import { Link, useNavigate } from "react-router-dom";
 import { useUnreadNotificationsCount } from "@/hooks/useUnreadNotificationsCount"; // Import the new hook
+import { useState, useEffect } from "react"; // Added useState, useEffect
+import { auth, db } from "@/lib/firebase"; // Import auth and db
+import { onAuthStateChanged } from "firebase/auth"; // Import onAuthStateChanged
+import { doc, getDoc } from "firebase/firestore"; // Import doc, getDoc
+import { Skeleton } from "@/components/ui/skeleton"; // Import Skeleton for loading state
 
 interface NavbarProps {
   isAuthenticated?: boolean;
@@ -21,14 +26,60 @@ interface NavbarProps {
   onLogout?: () => void;
 }
 
+interface UserProfile {
+  name: string;
+  email: string;
+  avatar?: string;
+}
+
 export function Navbar({ isAuthenticated = false, onCreateListing, onLogout }: NavbarProps) {
   const navigate = useNavigate();
   const { unreadCount } = useUnreadNotificationsCount(); // Use the hook to get unread count
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null); // State for user profile
+  const [loadingUser, setLoadingUser] = useState(true); // Loading state for user profile
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        try {
+          const userDocRef = doc(db, "users", user.uid);
+          const userDocSnap = await getDoc(userDocRef);
+          if (userDocSnap.exists()) {
+            setUserProfile(userDocSnap.data() as UserProfile);
+          } else {
+            // Fallback if profile doesn't exist in Firestore
+            setUserProfile({
+              name: user.displayName || "Guest User",
+              email: user.email || "N/A",
+              avatar: user.photoURL || "/placeholder.svg",
+            });
+          }
+        } catch (error) {
+          console.error("Error fetching user profile for navbar:", error);
+          setUserProfile(null); // Clear profile on error
+        } finally {
+          setLoadingUser(false);
+        }
+      } else {
+        setUserProfile(null);
+        setLoadingUser(false);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
 
   // Support both demo and real auth for logout
-  const handleLogout = () => {
+  const handleLogout = async () => { // Made async to await signOut
     localStorage.removeItem('campusconnect-demo-auth');
     localStorage.removeItem('user');
+    
+    try {
+      await auth.signOut(); // Await Firebase signOut
+      console.log("User signed out from Firebase.");
+    } catch (error) {
+      console.error("Error signing out from Firebase:", error);
+    }
+
     if (onLogout) {
       onLogout();
     } else {
@@ -122,20 +173,43 @@ export function Navbar({ isAuthenticated = false, onCreateListing, onLogout }: N
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src="/placeholder.svg" alt="@username" />
-                  <AvatarFallback>JD</AvatarFallback>
-                </Avatar>
+                {loadingUser ? (
+                  <Skeleton className="h-8 w-8 rounded-full" />
+                ) : userProfile ? (
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={userProfile.avatar || "/placeholder.svg"} alt={userProfile.name} />
+                    <AvatarFallback>{userProfile.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                  </Avatar>
+                ) : (
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src="/placeholder.svg" alt="Guest" />
+                    <AvatarFallback>GU</AvatarFallback>
+                  </Avatar>
+                )}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-56" align="end" forceMount>
               <DropdownMenuLabel className="font-normal">
-                <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium leading-none">John Doe</p>
-                  <p className="text-xs leading-none text-muted-foreground">
-                    john@iut-dhaka.edu
-                  </p>
-                </div>
+                {loadingUser ? (
+                  <div className="flex flex-col space-y-1">
+                    <Skeleton className="h-4 w-3/4 mb-1" />
+                    <Skeleton className="h-3 w-1/2" />
+                  </div>
+                ) : userProfile ? (
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-medium leading-none">{userProfile.name}</p>
+                    <p className="text-xs leading-none text-muted-foreground">
+                      {userProfile.email}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-medium leading-none">Guest User</p>
+                    <p className="text-xs leading-none text-muted-foreground">
+                      Please log in
+                    </p>
+                  </div>
+                )}
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => navigate('/profile')}>

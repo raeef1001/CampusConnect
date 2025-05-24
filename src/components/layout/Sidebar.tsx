@@ -16,9 +16,13 @@ import {
   Bookmark // Added Bookmark import
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useState } from "react";
+import { Skeleton } from "@/components/ui/skeleton"; // Added Skeleton import
+import { useState, useEffect } from "react"; // Added useEffect
 import { Link, useLocation } from "react-router-dom";
 import { useUnreadNotificationsCount } from "@/hooks/useUnreadNotificationsCount"; // Import the new hook
+import { auth, db } from "@/lib/firebase"; // Import auth and db
+import { onAuthStateChanged } from "firebase/auth"; // Import onAuthStateChanged
+import { doc, getDoc } from "firebase/firestore"; // Import doc, getDoc
 
 interface SidebarProps {
   className?: string;
@@ -48,10 +52,49 @@ const adminItems = [
   { icon: Shield, label: "Moderation", href: "/admin/moderation" },
 ];
 
+interface UserProfile {
+  name: string;
+  university: string;
+  major?: string;
+  avatar?: string;
+}
+
 export function Sidebar({ className, isCollapsed = false, onToggle }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(isCollapsed);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null); // State for user profile
+  const [loadingUser, setLoadingUser] = useState(true); // Loading state for user profile
   const location = useLocation();
   const { unreadCount } = useUnreadNotificationsCount(); // Use the hook to get unread count
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        try {
+          const userDocRef = doc(db, "users", user.uid);
+          const userDocSnap = await getDoc(userDocRef);
+          if (userDocSnap.exists()) {
+            setUserProfile(userDocSnap.data() as UserProfile);
+          } else {
+            // Fallback if profile doesn't exist in Firestore
+            setUserProfile({
+              name: user.displayName || "Guest User",
+              university: "N/A",
+              avatar: user.photoURL || "/placeholder.svg",
+            });
+          }
+        } catch (error) {
+          console.error("Error fetching user profile for sidebar:", error);
+          setUserProfile(null); // Clear profile on error
+        } finally {
+          setLoadingUser(false);
+        }
+      } else {
+        setUserProfile(null);
+        setLoadingUser(false);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
 
   const handleToggle = () => {
     setCollapsed(!collapsed);
@@ -140,25 +183,56 @@ export function Sidebar({ className, isCollapsed = false, onToggle }: SidebarPro
       </ScrollArea>
 
       <div className="border-t border-sidebar-border p-4">
-        <div className={cn(
-          "flex items-center",
-          collapsed ? "justify-center" : "space-x-3"
-        )}>
-          <Avatar className="h-8 w-8">
-            <AvatarImage src="/placeholder.svg" />
-            <AvatarFallback>JD</AvatarFallback>
-          </Avatar>
-          {!collapsed && (
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate text-black">John Doe</p>
-              <p className="text-xs text-black truncate">Computer Science</p>
-            </div>
-          )}
-        </div>
+        {loadingUser ? (
+          <div className={cn(
+            "flex items-center",
+            collapsed ? "justify-center" : "space-x-3"
+          )}>
+            <Skeleton className="h-8 w-8 rounded-full" />
+            {!collapsed && (
+              <div className="flex-1 min-w-0 space-y-1">
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-3 w-1/2" />
+              </div>
+            )}
+          </div>
+        ) : userProfile ? (
+          <div className={cn(
+            "flex items-center",
+            collapsed ? "justify-center" : "space-x-3"
+          )}>
+            <Avatar className="h-8 w-8">
+              <AvatarImage src={userProfile.avatar || "/placeholder.svg"} />
+              <AvatarFallback>{userProfile.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+            </Avatar>
+            {!collapsed && (
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate text-black">{userProfile.name}</p>
+                <p className="text-xs text-black truncate">{userProfile.university} {userProfile.major && `- ${userProfile.major}`}</p>
+              </div>
+            )}
+          </div>
+        ) : (
+          // Fallback for no user profile (e.g., not logged in)
+          <div className={cn(
+            "flex items-center",
+            collapsed ? "justify-center" : "space-x-3"
+          )}>
+            <Avatar className="h-8 w-8">
+              <AvatarImage src="/placeholder.svg" />
+              <AvatarFallback>GU</AvatarFallback>
+            </Avatar>
+            {!collapsed && (
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate text-black">Guest User</p>
+                <p className="text-xs text-black truncate">Please log in</p>
+              </div>
+            )}
+          </div>
+        )}
         
         {!collapsed && (
           <div className="mt-3 space-y-1">
-            {/* Removed duplicate Settings button as it's now in menuItems */}
             <Button variant="ghost" size="sm" className="w-full justify-start text-destructive hover:text-destructive-foreground">
               <LogOut className="h-4 w-4 mr-2" />
               Logout
