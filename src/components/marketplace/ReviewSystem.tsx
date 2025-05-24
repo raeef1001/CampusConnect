@@ -11,6 +11,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { ReportUser } from "./ReportUser";
 
 interface Review {
   id: string;
@@ -487,10 +488,18 @@ export function ReviewSystem({
                           <ThumbsUp className="h-4 w-4" />
                           <span>Helpful ({review.helpful})</span>
                         </button>
-                        <button className="flex items-center space-x-1 hover:text-red-600 transition-colors">
-                          <Flag className="h-4 w-4" />
-                          <span>Report</span>
-                        </button>
+                        <ReportUser
+                          userId={review.reviewerId}
+                          userName={review.reviewerName}
+                          listingId={review.listingId}
+                          listingTitle={review.listingTitle}
+                          trigger={
+                            <button className="flex items-center space-x-1 hover:text-red-600 transition-colors">
+                              <Flag className="h-4 w-4" />
+                              <span>Report</span>
+                            </button>
+                          }
+                        />
                       </div>
                     </div>
                   </div>
