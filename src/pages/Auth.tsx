@@ -154,6 +154,7 @@ export default function Auth() {
                         value={loginEmail}
                         onChange={(e) => setLoginEmail(e.target.value)}
                         className="transition-all duration-200 focus:ring-2 focus:ring-blue-500/40"
+                        autoComplete="email"
                       />
                     </div>
                     <div className="space-y-2">
@@ -171,6 +172,7 @@ export default function Auth() {
                           value={loginPassword}
                           onChange={(e) => setLoginPassword(e.target.value)}
                           className="transition-all duration-200 focus:ring-2 focus:ring-blue-500/40"
+                          autoComplete="current-password"
                         />
                         <Button
                           type="button"
@@ -243,6 +245,7 @@ export default function Auth() {
                         value={fullName}
                         onChange={(e) => setFullName(e.target.value)}
                         className="transition-all duration-200 focus:ring-2 focus:ring-blue-500/40"
+                        autoComplete="name"
                       />
                     </div>
                     <div className="space-y-2">
@@ -255,6 +258,7 @@ export default function Auth() {
                         value={signupEmail}
                         onChange={(e) => setSignupEmail(e.target.value)}
                         className="transition-all duration-200 focus:ring-2 focus:ring-blue-500/40"
+                        autoComplete="email"
                       />
                       <p className="text-xs text-gray-500">
                         Must be an official university email address
@@ -270,6 +274,7 @@ export default function Auth() {
                           value={signupPassword}
                           onChange={(e) => setSignupPassword(e.target.value)}
                           className="transition-all duration-200 focus:ring-2 focus:ring-blue-500/40"
+                          autoComplete="new-password"
                         />
                         <Button
                           type="button"
@@ -296,6 +301,7 @@ export default function Auth() {
                           value={confirmPassword}
                           onChange={(e) => setConfirmPassword(e.target.value)}
                           className="transition-all duration-200 focus:ring-2 focus:ring-blue-500/40"
+                          autoComplete="new-password"
                         />
                         <Button
                           type="button"
@@ -321,6 +327,7 @@ export default function Auth() {
                         value={phoneNumber}
                         onChange={(e) => setPhoneNumber(e.target.value)}
                         className="transition-all duration-200 focus:ring-2 focus:ring-blue-500/40"
+                        autoComplete="tel"
                       />
                       <p className="text-xs text-gray-500">
                         For admin verification and safety purposes only

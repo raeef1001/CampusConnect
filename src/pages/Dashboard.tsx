@@ -1,6 +1,8 @@
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { db } from "@/lib/firebase";
+import { collection, getDocs, query, orderBy } from "firebase/firestore";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Navbar } from "@/components/layout/Navbar";
@@ -31,107 +33,6 @@ import {
   CartesianGrid
 } from "recharts";
 
-// Mock data for listings (add a date for sorting by newest)
-const mockListings = [
-  {
-    id: "1",
-    title: "MacBook Pro 13-inch 2021",
-    price: 1200, // Changed to number for sorting
-    condition: "Like New",
-    description: "Perfect condition MacBook Pro with M1 chip. Comes with original charger and box. Used for only 6 months.",
-    image: "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=400&h=300&fit=crop",
-    seller: {
-      name: "Sarah Chen",
-      avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop",
-      university: "University of Dhaka",
-      rating: 4.9
-    },
-    category: "Electronics",
-    createdAt: "2024-05-20T10:00:00Z" // Added creation date
-  },
-  {
-    id: "2",
-    title: "Calculus Textbook - Stewart",
-    price: 45,
-    condition: "Good",
-    description: "8th Edition Stewart Calculus textbook. Some highlighting but all pages intact. Great for MATH 101.",
-    image: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=400&h=300&fit=crop",
-    seller: {
-      name: "Ahmed Rahman",
-      avatar: "https://images.unsplash.com/photo-1599566150163-29194dcaad36?w=150&h=150&fit=crop",
-      university: "BUET",
-      rating: 4.7
-    },
-    category: "Textbooks",
-    createdAt: "2024-05-18T11:30:00Z"
-  },
-  {
-    id: "3",
-    title: "Math Tutoring Services",
-    price: 15,
-    condition: "N/A",
-    description: "Experienced math tutor offering help with calculus, algebra, and statistics. 3+ years experience.",
-    image: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=400&h=300&fit=crop",
-    seller: {
-      name: "Maria Santos",
-      avatar: "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&h=150&fit=crop",
-      university: "NSU",
-      rating: 4.95
-    },
-    category: "Services",
-    isService: true,
-    createdAt: "2024-05-22T09:00:00Z"
-  },
-  {
-    id: "4",
-    title: "Study Desk with Drawers",
-    price: 80,
-    condition: "Good",
-    description: "Wooden study desk with 3 drawers. Perfect for dorm room. Easy to assemble.",
-    image: "https://images.unsplash.com/photo-1605810230434-7631ac76ec81?w=400&h=300&fit=crop",
-    seller: {
-      name: "John Doe",
-      avatar: "https://images.unsplash.com/photo-1599566150163-29194dcaad36?w=150&h=150&fit=crop",
-      university: "IUT Dhaka",
-      rating: 4.6
-    },
-    category: "Furniture",
-    createdAt: "2024-05-15T14:00:00Z"
-  },
-  {
-    id: "5",
-    title: "Gaming Laptop - ASUS ROG",
-    price: 950,
-    condition: "Good",
-    description: "ASUS ROG Strix gaming laptop. RTX 3060, 16GB RAM, 512GB SSD. Great for gaming and projects.",
-    image: "https://images.unsplash.com/photo-1531297484001-80022131f5a1?w=400&h=300&fit=crop",
-    seller: {
-      name: "David Kim",
-      avatar: "https://images.unsplash.com/photo-1599566150163-29194dcaad36?w=150&h=150&fit=crop",
-      university: "BRAC University",
-      rating: 4.8
-    },
-    category: "Electronics",
-    createdAt: "2024-05-19T16:00:00Z"
-  },
-  {
-    id: "6",
-    title: "Organic Chemistry Lab Kit",
-    price: 65,
-    condition: "New",
-    description: "Complete organic chemistry lab kit with all necessary equipment. Never used, still in packaging.",
-    image: "https://images.unsplash.com/photo-1518770660439-4636190af475?w=400&h=300&fit=crop",
-    seller: {
-      name: "Lisa Park",
-      avatar: "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&h=150&fit=crop",
-      university: "University of Dhaka",
-      rating: 4.9
-    },
-    category: "Academic Supplies",
-    createdAt: "2024-05-21T08:00:00Z"
-  }
-];
-
 export default function Dashboard() {
   const navigate = useNavigate();
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -141,9 +42,45 @@ export default function Dashboard() {
   const [currentPage, setCurrentPage] = useState(1);
   const [showFilterSidebar, setShowFilterSidebar] = useState(false); // State for filter sidebar visibility
   const itemsPerPage = 6; // Number of listings per page
+  const [listings, setListings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchListings = async () => {
+      try {
+        const listingsCollectionRef = collection(db, "listings");
+        const q = query(listingsCollectionRef, orderBy("createdAt", "desc"));
+        const querySnapshot = await getDocs(q);
+        const fetchedListings = querySnapshot.docs.map((doc) => {
+          const data = doc.data();
+          const sellerData = data.seller || {}; // Ensure seller object exists
+          return {
+            id: doc.id,
+            ...data,
+            seller: {
+              userId: sellerData.userId || "", // Ensure userId exists, provide empty string if not
+              name: sellerData.name || "Unknown Seller",
+              avatar: sellerData.avatar || "",
+              university: sellerData.university || "Unknown University",
+              rating: sellerData.rating || 0,
+            },
+          };
+        });
+        setListings(fetchedListings);
+      } catch (err) {
+        console.error("Error fetching listings:", err);
+        setError(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchListings();
+  }, []);
 
   const filteredAndSortedListings = useMemo(() => {
-    let currentListings = [...mockListings];
+    let currentListings = [...listings];
 
     // 1. Filter by search term
     if (searchTerm) {
@@ -159,7 +96,7 @@ export default function Dashboard() {
     currentListings.sort((a, b) => {
       switch (sortOrder) {
         case "newest":
-          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+          return new Date(b.createdAt?.toDate()).getTime() - new Date(a.createdAt?.toDate()).getTime();
         case "price-low":
           return a.price - b.price;
         case "price-high":
@@ -172,7 +109,7 @@ export default function Dashboard() {
     });
 
     return currentListings;
-  }, [searchTerm, sortOrder]);
+  }, [searchTerm, sortOrder, listings]);
 
   // Pagination logic
   const totalPages = Math.ceil(filteredAndSortedListings.length / itemsPerPage);
@@ -184,6 +121,32 @@ export default function Dashboard() {
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
   };
+
+  const chartData = useMemo(() => {
+    const monthlyListings: { [key: string]: number } = {};
+    
+    listings.forEach((listing) => {
+      const date = listing.createdAt?.toDate();
+      if (date) {
+        const month = date.toLocaleString('default', { month: 'short' });
+        const year = date.getFullYear();
+        const key = `${month} ${year}`; // e.g., "Jan 2024"
+        monthlyListings[key] = (monthlyListings[key] || 0) + 1;
+      }
+    });
+
+    // Sort months chronologically for the chart
+    const sortedMonths = Object.keys(monthlyListings).sort((a, b) => {
+      const dateA = new Date(a);
+      const dateB = new Date(b);
+      return dateA.getTime() - dateB.getTime();
+    });
+
+    return sortedMonths.map(monthYear => ({
+      name: monthYear,
+      listings: monthlyListings[monthYear],
+    }));
+  }, [listings]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -321,20 +284,40 @@ export default function Dashboard() {
               </div>
             </div>
             
-            {/* Listings Grid */}
-            <div className={`grid gap-6 ${
-              viewMode === "grid" 
-                ? "grid-cols-1 md:grid-cols-2 xl:grid-cols-3" 
-                : "grid-cols-1"
-            }`}>
-              {paginatedListings.map((listing) => (
-                <ListingCard
-                  key={listing.id}
-                  {...listing}
-                  price={`$${listing.price}`} // Convert price back to string for display
-                />
-              ))}
-            </div>
+            {loading && (
+              <div className="text-center py-8">
+                <p className="text-lg text-muted-foreground">Loading listings...</p>
+              </div>
+            )}
+
+            {error && (
+              <div className="text-center py-8 text-red-500">
+                <p className="text-lg">Error fetching listings: {error.message}</p>
+              </div>
+            )}
+
+            {!loading && !error && paginatedListings.length === 0 && (
+              <div className="text-center py-8">
+                <p className="text-lg text-muted-foreground">No listings found.</p>
+              </div>
+            )}
+
+            {!loading && !error && paginatedListings.length > 0 && (
+              <div className={`grid gap-6 ${
+                viewMode === "grid" 
+                  ? "grid-cols-1 md:grid-cols-2 xl:grid-cols-3" 
+                  : "grid-cols-1"
+              }`}>
+                {paginatedListings.map((listing) => (
+                  <ListingCard
+                    key={listing.id}
+                    {...listing}
+                    image={listing.imageUrl} // Pass imageUrl as image prop
+                    price={`$${listing.price}`} // Convert price back to string for display
+                  />
+                ))}
+              </div>
+            )}
             
             {/* Pagination */}
             <div className="flex items-center justify-center space-x-2 mt-12">
@@ -374,13 +357,3 @@ export default function Dashboard() {
     </div>
   );
 }
-
-const chartData = [
-  { name: "Jan", listings: 4000 },
-  { name: "Feb", listings: 3000 },
-  { name: "Mar", listings: 2000 },
-  { name: "Apr", listings: 2780 },
-  { name: "May", listings: 1890 },
-  { name: "Jun", listings: 2390 },
-  { name: "Jul", listings: 3490 },
-];

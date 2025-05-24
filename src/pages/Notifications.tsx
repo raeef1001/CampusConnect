@@ -1,49 +1,120 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Navbar } from "@/components/layout/Navbar";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { FloatingChat } from "@/components/ui/floating-chat";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge"; // Added Badge import
-import { BellRing, Package, MessageSquare, User } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { BellRing, Package, MessageSquare, User as UserIcon } from "lucide-react";
+import { auth, db } from "@/lib/firebase";
+import { collection, query, where, orderBy, onSnapshot, doc, updateDoc } from "firebase/firestore";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/components/ui/use-toast";
+import { User as FirebaseUser } from "firebase/auth"; // Import Firebase User type
+
+interface Notification {
+  id: string;
+  userId: string;
+  type: "listing" | "message" | "profile" | "system" | "bookmark";
+  message: string;
+  read: boolean;
+  createdAt: {
+    seconds: number;
+    nanoseconds: number;
+  };
+  relatedId?: string; // e.g., listingId, chatId, userId
+}
 
 export default function Notifications() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null); // Type as FirebaseUser
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
-  // Mock notifications data
-  const mockNotifications = [
-    {
-      id: "1",
-      type: "listing",
-      icon: Package,
-      message: "Your 'MacBook Pro' listing received a new offer!",
-      time: "2 hours ago",
-      read: false,
-    },
-    {
-      id: "2",
-      type: "message",
-      icon: MessageSquare,
-      message: "New message from Sarah Chen regarding 'Calculus Textbook'.",
-      time: "5 hours ago",
-      read: false,
-    },
-    {
-      id: "3",
-      type: "profile",
-      icon: User,
-      message: "John Doe viewed your profile.",
-      time: "1 day ago",
-      read: true,
-    },
-    {
-      id: "4",
-      type: "system",
-      icon: BellRing,
-      message: "System update: New features are now available!",
-      time: "3 days ago",
-      read: true,
-    },
-  ];
+  useEffect(() => {
+    const unsubscribeAuth = auth.onAuthStateChanged((user) => {
+      if (user) {
+        setCurrentUser(user);
+        setLoading(true);
+        const q = query(
+          collection(db, "notifications"),
+          where("userId", "==", user.uid),
+          orderBy("createdAt", "desc")
+        );
+
+        const unsubscribeNotifications = onSnapshot(q, (snapshot) => {
+          const fetchedNotifications: Notification[] = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          } as Notification));
+          setNotifications(fetchedNotifications);
+          setLoading(false);
+        }, (error) => {
+          console.error("Error fetching notifications: ", error);
+          setLoading(false);
+          toast({
+            title: "Error",
+            description: "Failed to load notifications.",
+            variant: "destructive",
+          });
+        });
+
+        return () => unsubscribeNotifications();
+      } else {
+        setCurrentUser(null);
+        setNotifications([]);
+        setLoading(false);
+      }
+    });
+
+    return () => unsubscribeAuth();
+  }, []);
+
+  const handleMarkAsRead = async (notificationId: string) => {
+    if (!currentUser) return;
+    try {
+      await updateDoc(doc(db, "notifications", notificationId), {
+        read: true,
+      });
+      toast({
+        title: "Notification Marked as Read",
+        description: "This notification has been marked as read.",
+      });
+    } catch (error) {
+      console.error("Error marking notification as read:", error);
+      toast({
+        title: "Error",
+        description: "Failed to mark notification as read. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const getNotificationIcon = (type: Notification['type']) => {
+    switch (type) {
+      case "listing": return Package;
+      case "message": return MessageSquare;
+      case "profile": return UserIcon;
+      case "bookmark": return BellRing; // Using BellRing for bookmark for now
+      case "system": return BellRing;
+      default: return BellRing;
+    }
+  };
+
+  const formatTime = (timestamp: { seconds: number; nanoseconds: number }) => {
+    const date = new Date(timestamp.seconds * 1000);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMinutes = Math.round(diffMs / (1000 * 60));
+    const diffHours = Math.round(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffMinutes < 1) return "just now";
+    if (diffMinutes < 60) return `${diffMinutes} minutes ago`;
+    if (diffHours < 24) return `${diffHours} hours ago`;
+    if (diffDays < 7) return `${diffDays} days ago`;
+    return date.toLocaleDateString();
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -62,25 +133,50 @@ export default function Notifications() {
               <p className="text-lg text-gray-600 mb-8">Stay updated with activities on CampusConnect.</p>
               
               <div className="space-y-4">
-                {mockNotifications.map((notification) => (
-                  <Card key={notification.id} className={!notification.read ? "bg-blue-50 border-blue-200" : ""}>
-                    <CardContent className="flex items-center p-4">
-                      <div className="mr-4">
-                        <notification.icon className="h-6 w-6 text-blue-600" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-medium">{notification.message}</p>
-                        <p className="text-sm text-gray-500">{notification.time}</p>
-                      </div>
-                      {!notification.read && (
-                        <Badge variant="secondary" className="ml-auto">New</Badge>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))}
-                {mockNotifications.length === 0 && (
-                  <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 text-gray-500">
-                    No new notifications.
+                {loading ? (
+                  <div className="space-y-4">
+                    {[...Array(4)].map((_, i) => (
+                      <Card key={i}>
+                        <CardContent className="flex items-center p-4">
+                          <Skeleton className="h-6 w-6 mr-4 rounded-full" />
+                          <div className="flex-1 space-y-2">
+                            <Skeleton className="h-4 w-3/4" />
+                            <Skeleton className="h-3 w-1/2" />
+                          </div>
+                          <Skeleton className="h-6 w-16 ml-auto" />
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                ) : notifications.length > 0 ? (
+                  notifications.map((notification) => {
+                    const IconComponent = getNotificationIcon(notification.type);
+                    return (
+                      <Card 
+                        key={notification.id} 
+                        className={!notification.read ? "bg-blue-50 border-blue-200" : ""}
+                        onClick={() => !notification.read && handleMarkAsRead(notification.id)}
+                      >
+                        <CardContent className="flex items-center p-4 cursor-pointer">
+                          <div className="mr-4">
+                            <IconComponent className="h-6 w-6 text-blue-600" />
+                          </div>
+                          <div className="flex-1">
+                            <p className="font-medium">{notification.message}</p>
+                            <p className="text-sm text-gray-500">{formatTime(notification.createdAt)}</p>
+                          </div>
+                          {!notification.read && (
+                            <Badge variant="secondary" className="ml-auto">New</Badge>
+                          )}
+                        </CardContent>
+                      </Card>
+                    );
+                  })
+                ) : (
+                  <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 text-gray-500 text-center">
+                    <BellRing className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                    <p>You're all caught up!</p>
+                    <p className="text-sm">No new notifications.</p>
                   </div>
                 )}
               </div>
