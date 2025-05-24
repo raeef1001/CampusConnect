@@ -17,6 +17,8 @@ import Settings from "./pages/Settings";
 import CreateListing from "./pages/CreateListing";
 import EditListing from "./pages/EditListing";
 import ListingDetails from "./pages/ListingDetails"; // Import the new page
+import Admin from "./pages/Admin";
+import AdminSetup from "./pages/AdminSetup";
 import NotFound from "./pages/NotFound";
 import { auth } from "./lib/firebase"; // Import Firebase auth
 import { onAuthStateChanged } from "firebase/auth"; // Import onAuthStateChanged
@@ -207,6 +209,30 @@ const AnimatedRoutes = ({ isAuthenticated }: AnimatedRoutesProps) => {
             transition={pageTransition}
           >
             {isAuthenticated ? <EditListing /> : <Navigate to="/auth" />}
+          </motion.div>
+        } />
+        <Route path="/admin" element={
+          <motion.div
+            key="admin"
+            initial="initial"
+            animate="in"
+            exit="out"
+            variants={pageVariants}
+            transition={pageTransition}
+          >
+            {isAuthenticated ? <Admin /> : <Navigate to="/auth" />}
+          </motion.div>
+        } />
+        <Route path="/admin-setup" element={
+          <motion.div
+            key="admin-setup"
+            initial="initial"
+            animate="in"
+            exit="out"
+            variants={pageVariants}
+            transition={pageTransition}
+          >
+            {isAuthenticated ? <AdminSetup /> : <Navigate to="/auth" />}
           </motion.div>
         } />
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
