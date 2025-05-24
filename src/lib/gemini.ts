@@ -24,14 +24,24 @@ export async function generateListingResponse(userMessage: string, listings: Lis
       title: listing.title,
       description: listing.description,
       price: listing.price,
-      categories: listing.categories, // Use categories array
+      category: listing.category, // Use category string
       condition: listing.condition,
+      location: listing.location || (listing.locations && listing.locations.length > 0 ? listing.locations[0].name : 'Unknown'),
       seller: listing.seller?.name || 'Unknown',
-      university: listing.seller?.university || 'Unknown'
+      university: listing.seller?.university || 'Unknown',
+      rating: listing.seller?.rating || 'N/A'
     }));
 
     const prompt = `
-You are a helpful AI assistant for CampusConnect, a student marketplace platform. You help users find products and services listed by other students.
+You are a helpful AI assistant for CampusConnect, a student marketplace platform. You help users find products and services listed by other students. You can search listings by:
+- Product title and description
+- Categories
+- Condition
+- Location (e.g., specific university buildings, general areas)
+- Seller's university
+- Seller's rating
+
+Current available listings:
 
 Current available listings:
 ${JSON.stringify(listingsContext, null, 2)}

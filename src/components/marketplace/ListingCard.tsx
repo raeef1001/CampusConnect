@@ -346,7 +346,7 @@ export function ListingCard({
           listing={{
             id,
             title,
-            price: parseFloat(price.replace('$', '')),
+            price: parseFloat(String(price).replace('$', '')),
             sellerId: listingUserId || seller.userId || seller?.userId || '',
             sellerName: seller.name,
             category,
