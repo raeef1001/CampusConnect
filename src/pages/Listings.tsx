@@ -352,6 +352,10 @@ return () => unsubscribe();
                           category={listing.category}
                           seller={listing.seller || { name: "Unknown Seller", userId: "", university: "Unknown", rating: 0 }}
                           isService={listing.category === "Services"}
+                          locations={listing.locations}
+                          deliveryRadius={listing.deliveryRadius}
+                          isAvailable={listing.isAvailable}
+                          availabilityStatus={listing.availabilityStatus}
                         />
                       ))
                     ) : (
