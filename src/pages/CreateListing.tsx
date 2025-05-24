@@ -10,10 +10,16 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { FloatingChat } from "@/components/ui/floating-chat";
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft } from 'lucide-react';
-import { db, auth, storage } from '@/lib/firebase'; // Import storage
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'; // Import storage functions
+import { db, auth } from '@/lib/firebase'; // Import storage
+import { collection, addDoc, serverTimestamp, doc, getDoc } from 'firebase/firestore'; // Import doc and getDoc
 import { useToast } from '@/components/ui/use-toast';
+import { v2 as cloudinary } from 'cloudinary';
+
+cloudinary.config({ 
+  cloud_name: import.meta.env.VITE_CLOUDINARY_CLOUD_NAME, 
+  api_key: import.meta.env.VITE_CLOUDINARY_API_KEY, 
+  api_secret: import.meta.env.VITE_CLOUDINARY_API_SECRET
+});
 
 export default function CreateListing() {
   const navigate = useNavigate();
@@ -31,7 +37,8 @@ export default function CreateListing() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!auth.currentUser) {
+    const user = auth.currentUser;
+    if (!user) {
       toast({
         title: "Error",
         description: "You must be logged in to create a listing.",
@@ -45,11 +52,22 @@ export default function CreateListing() {
 
     if (imageFile) {
       try {
-        const storageRef = ref(storage, `listing_images/${auth.currentUser.uid}/${imageFile.name}`);
-        const uploadResult = await uploadBytes(storageRef, imageFile);
-        imageUrl = await getDownloadURL(uploadResult.ref);
+        // Convert File to base64 string for Cloudinary upload
+        const reader = new FileReader();
+        reader.readAsDataURL(imageFile);
+        await new Promise<void>((resolve) => {
+          reader.onloadend = async () => {
+            const base64data = reader.result as string;
+            const uploadResult = await cloudinary.uploader.upload(base64data, {
+              folder: `listing_images/${user.uid}`, // Optional: organize uploads in folders
+              public_id: imageFile.name.split('.')[0], // Use original file name as public_id
+            });
+            imageUrl = uploadResult.secure_url;
+            resolve();
+          };
+        });
       } catch (error) {
-        console.error("Error uploading image: ", error);
+        console.error("Error uploading image to Cloudinary: ", error);
         toast({
           title: "Error",
           description: "Failed to upload image. Please try again.",
@@ -62,6 +80,34 @@ export default function CreateListing() {
       imageUrl = "/placeholder.svg"; // Use placeholder if no image is selected
     }
 
+    // Fetch seller profile
+    let sellerProfile = {
+      userId: user.uid,
+      name: user.displayName || user.email?.split('@')[0] || "Unknown Seller",
+      avatar: user.photoURL || "",
+      university: "Unknown University", // Default, will try to fetch from profile
+      rating: 0, // Default, will try to fetch from profile
+    };
+
+    try {
+      const userDocRef = doc(db, "users", user.uid);
+      const userDocSnap = await getDoc(userDocRef);
+
+      if (userDocSnap.exists()) {
+        const userData = userDocSnap.data();
+        sellerProfile = {
+          ...sellerProfile,
+          name: userData.name || sellerProfile.name,
+          avatar: userData.avatar || sellerProfile.avatar,
+          university: userData.university || sellerProfile.university,
+          rating: userData.rating || sellerProfile.rating,
+        };
+      }
+    } catch (profileError) {
+      console.error("Error fetching seller profile: ", profileError);
+      // Continue without profile if there's an error
+    }
+
     try {
       await addDoc(collection(db, "listings"), {
         title,
@@ -70,8 +116,9 @@ export default function CreateListing() {
         category,
         condition,
         imageUrl, // Use the uploaded image URL
-        userId: auth.currentUser.uid,
-        userEmail: auth.currentUser.email,
+        userId: user.uid, // Keep userId at top level for easy querying
+        userEmail: user.email, // Keep userEmail at top level
+        seller: sellerProfile, // Add the complete seller profile
         createdAt: serverTimestamp(),
       });
 

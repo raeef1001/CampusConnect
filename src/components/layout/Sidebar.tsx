@@ -17,7 +17,8 @@ import {
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useState } from "react";
-import { Link, useLocation } from "react-router-dom"; // Import Link and useLocation
+import { Link, useLocation } from "react-router-dom";
+import { useUnreadNotificationsCount } from "@/hooks/useUnreadNotificationsCount"; // Import the new hook
 
 interface SidebarProps {
   className?: string;
@@ -25,15 +26,22 @@ interface SidebarProps {
   onToggle?: () => void;
 }
 
-const menuItems = [
+interface MenuItem {
+  icon: React.ElementType;
+  label: string;
+  href: string;
+  badge?: number;
+}
+
+const menuItems = (unreadCount: number): MenuItem[] => [ // Use unreadCount from hook
   { icon: Home, label: "Dashboard", href: "/dashboard" },
   { icon: Package, label: "All Listings", href: "/listings" },
   { icon: Package, label: "My Listings", href: "/listings?filter=my-listings" },
-  { icon: Bookmark, label: "Bookmarked Products", href: "/listings?filter=bookmarked-listings" }, // Added Bookmarked Products
+  { icon: Bookmark, label: "Bookmarked Products", href: "/listings?filter=bookmarked-listings" },
   { icon: MessageSquare, label: "Messages", href: "/messages", badge: 2 },
+  { icon: Bell, label: "Notifications", href: "/notifications", badge: unreadCount > 0 ? unreadCount : undefined }, // Use dynamic count
   { icon: User, label: "Profile", href: "/profile" },
-  { icon: Bell, label: "Notifications", href: "/notifications", badge: 3 }, // Added Notifications
-  { icon: Settings, label: "Settings", href: "/settings" }, // Added Settings
+  { icon: Settings, label: "Settings", href: "/settings" },
 ];
 
 const adminItems = [
@@ -42,7 +50,8 @@ const adminItems = [
 
 export function Sidebar({ className, isCollapsed = false, onToggle }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(isCollapsed);
-  const location = useLocation(); // Get current location
+  const location = useLocation();
+  const { unreadCount } = useUnreadNotificationsCount(); // Use the hook to get unread count
 
   const handleToggle = () => {
     setCollapsed(!collapsed);
@@ -78,22 +87,22 @@ export function Sidebar({ className, isCollapsed = false, onToggle }: SidebarPro
       <ScrollArea className="flex-1 px-3">
         <div className="space-y-2 py-4">
           <div className="space-y-1">
-            {menuItems.map((item) => (
+            {menuItems(unreadCount).map((item: MenuItem) => (
               <Button
                 key={item.href}
-                variant={location.pathname === item.href ? "sidebar-primary" : "ghost"} // Set active based on current path
+                variant={location.pathname === item.href ? "sidebar-primary" : "ghost"}
                 className={cn(
                   "w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                   collapsed && "px-2"
                 )}
                 asChild
               >
-                <Link to={item.href}> {/* Use Link component */}
+                <Link to={item.href}>
                   <item.icon className="h-4 w-4" />
                   {!collapsed && (
                     <>
                       <span className="ml-2">{item.label}</span>
-                      {item.badge && (
+                      {item.badge !== undefined && item.badge > 0 && (
                         <span className="ml-auto bg-warm-500 text-primary-warm-foreground text-xs rounded-full px-2 py-0.5">
                           {item.badge}
                         </span>
