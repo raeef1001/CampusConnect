@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { doc, getDoc, collection, addDoc, deleteDoc, query, where, getDocs, serverTimestamp } from "firebase/firestore";
 import { db, auth } from "@/lib/firebase";
+import { dbRateLimiter } from '@/lib/rateLimiter'; // Import the rate limiter
 import { Navbar } from "@/components/layout/Navbar";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { FloatingChat } from "@/components/ui/floating-chat";
@@ -14,39 +15,8 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/components/ui/use-toast";
 import { reverseGeocode, getLocationName } from "@/utils/geocoding";
 import LocationDisplay from "@/components/LocationDisplay";
-<<<<<<< HEAD
 import BidDialog from "@/components/ui/bid-dialog";
-
-interface LocationData {
-  id: string;
-  lat: number;
-  lng: number;
-  type: 'main' | 'delivery';
-  name?: string;
-}
-
-interface Listing {
-  id: string;
-  title: string;
-  description: string;
-  price: number;
-  category: string;
-  condition: string;
-  imageUrl: string;
-  sellerId: string;
-  userEmail: string;
-  locations?: LocationData[];
-  deliveryRadius?: number;
-  isAvailable?: boolean;
-  availabilityStatus?: 'available' | 'sold' | 'reserved' | 'unavailable';
-  createdAt: {
-    seconds: number;
-    nanoseconds: number;
-  };
-}
-=======
 import { Listing, LocationData } from "@/types/listing.d";
->>>>>>> 89b431092f6e9437c9f0b6a40210e6a75e273f8c
 
 interface SellerProfile { // Define SellerProfile interface
   name: string;
@@ -77,7 +47,7 @@ export default function ListingDetails() {
       }
       try {
         const docRef = doc(db, "listings", id);
-        const docSnap = await getDoc(docRef);
+        const docSnap = await dbRateLimiter.execute(() => getDoc(docRef));
 
         if (docSnap.exists()) {
           const rawData = docSnap.data();
@@ -100,16 +70,10 @@ export default function ListingDetails() {
           setListing(listingData);
 
           // Fetch seller profile
-<<<<<<< HEAD
           if (listingData.sellerId) {
             try {
               const userDocRef = doc(db, "users", listingData.sellerId);
-=======
-          if (listingData.sellerId) { // Use sellerId
-            try {
-              const userDocRef = doc(db, "users", listingData.sellerId); // Use sellerId
->>>>>>> 89b431092f6e9437c9f0b6a40210e6a75e273f8c
-              const userDocSnap = await getDoc(userDocRef);
+              const userDocSnap = await dbRateLimiter.execute(() => getDoc(userDocRef));
               if (userDocSnap.exists()) {
                 setSellerProfile(userDocSnap.data() as SellerProfile);
               } else {
@@ -151,7 +115,7 @@ export default function ListingDetails() {
             where("userId", "==", user.uid),
             where("listingId", "==", id)
           );
-          const querySnapshot = await getDocs(q);
+          const querySnapshot = await dbRateLimiter.execute(() => getDocs(q));
           setIsFavorited(!querySnapshot.empty);
         }
       } catch (err) {
@@ -185,9 +149,9 @@ export default function ListingDetails() {
           where("userId", "==", user.uid),
           where("listingId", "==", id)
         );
-        const querySnapshot = await getDocs(q);
+        const querySnapshot = await dbRateLimiter.execute(() => getDocs(q));
         querySnapshot.forEach(async (doc) => {
-          await deleteDoc(doc.ref);
+          await dbRateLimiter.execute(() => deleteDoc(doc.ref));
         });
         toast({
           title: "Bookmark Removed",
@@ -195,32 +159,28 @@ export default function ListingDetails() {
         });
       } else {
         // Add to favorites
-        await addDoc(collection(db, "bookmarks"), {
+        await dbRateLimiter.execute(() => addDoc(collection(db, "bookmarks"), {
           userId: user.uid,
           listingId: id,
           createdAt: serverTimestamp(),
-        });
+        }));
         toast({
           title: "Bookmark Added",
           description: "Listing added to your favorites!",
         });
 
         // Create notification for the listing owner
-<<<<<<< HEAD
-        const listingOwnerId = listing?.sellerId; // Use optional chaining
-=======
-        const listingOwnerId = listing?.sellerId; // Use sellerId
->>>>>>> 89b431092f6e9437c9f0b6a40210e6a75e273f8c
+        const listingOwnerId = listing?.sellerId;
         const currentUser = auth.currentUser; // Get current user
         if (currentUser && listingOwnerId && listingOwnerId !== currentUser.uid) { // Don't notify self, and ensure listingOwnerId exists
-          await addDoc(collection(db, "notifications"), {
+          await dbRateLimiter.execute(() => addDoc(collection(db, "notifications"), {
             userId: listingOwnerId,
             type: "bookmark",
             message: `Your listing '${listing?.title}' has been bookmarked by ${currentUser.displayName || currentUser.email?.split('@')[0]}!`, // Use optional chaining for listing.title
             read: false,
             createdAt: serverTimestamp(),
             relatedId: id, // Link to the listing
-          });
+          }));
         }
       }
       setIsFavorited(!isFavorited);
@@ -245,11 +205,7 @@ export default function ListingDetails() {
       return;
     }
     if (listing) {
-<<<<<<< HEAD
       navigate("/messages", { state: { sellerId: listing.sellerId, listingId: id } });
-=======
-      navigate("/messages", { state: { sellerId: listing.sellerId, listingId: id } }); // Use sellerId
->>>>>>> 89b431092f6e9437c9f0b6a40210e6a75e273f8c
     }
   };
 
@@ -318,7 +274,7 @@ export default function ListingDetails() {
   const displaySellerAvatar = sellerProfile?.avatar || listing.seller.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${listing.seller.userId}`; // Use seller.avatar or seller.userId for fallback
   const displaySellerUniversity = sellerProfile?.university || listing.seller.university; // Use seller.university
   const displaySellerRating = sellerProfile?.rating || listing.seller.rating; // Use seller.rating
-  const isService = listing.categories.includes("Services"); // Check if categories array includes "Services"
+  const isService = listing.category === "Services"; // Check if category is "Services"
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -359,7 +315,7 @@ export default function ListingDetails() {
                 </Button>
                 <div className="absolute top-4 left-4">
                   <Badge variant="secondary" className="bg-background/90 backdrop-blur-sm font-medium text-base">
-                    {listing.categories.join(', ')} {/* Display categories as comma-separated string */}
+                    {listing.category} {/* Display category */}
                   </Badge>
                 </div>
               </div>
@@ -538,7 +494,7 @@ export default function ListingDetails() {
           listing={{
             id: listing.id,
             title: listing.title,
-            price: listing.price,
+            price: Number(listing.price),
             sellerId: listing.sellerId || '',
             sellerName: displaySellerName,
             category: listing.category,
