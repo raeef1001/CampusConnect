@@ -50,7 +50,7 @@ const menuItems = (unreadNotificationsCount: number, unreadMessagesCount: number
 ];
 
 const adminItems = [
-  { icon: Shield, label: "Moderation", href: "/admin/moderation" },
+  { icon: Shield, label: "Admin Dashboard", href: "/admin" },
 ];
 
 interface UserProfile {
@@ -58,6 +58,8 @@ interface UserProfile {
   university: string;
   major?: string;
   avatar?: string;
+  role?: string;
+  isAdmin?: boolean;
 }
 
 export function Sidebar({ className, isCollapsed = false, onToggle }: SidebarProps) {
@@ -165,7 +167,7 @@ export function Sidebar({ className, isCollapsed = false, onToggle }: SidebarPro
             ))}
           </div>
 
-          {!collapsed && (
+          {!collapsed && userProfile && (userProfile.role === 'admin' || userProfile.isAdmin) && (
             <div className="pt-4">
               <p className="px-3 text-xs font-medium text-black uppercase tracking-wider">
                 Admin
@@ -174,11 +176,11 @@ export function Sidebar({ className, isCollapsed = false, onToggle }: SidebarPro
                 {adminItems.map((item) => (
                   <Button
                     key={item.href}
-                    variant="ghost"
+                    variant={location.pathname === item.href ? "sidebar-primary" : "ghost"}
                     className="w-full justify-start text-black hover:bg-sidebar-accent hover:text-black"
                     asChild
                   >
-                    <Link to={item.href}> {/* Use Link component */}
+                    <Link to={item.href}>
                       <item.icon className="h-4 w-4" />
                       <span className="ml-2">{item.label}</span>
                     </Link>
