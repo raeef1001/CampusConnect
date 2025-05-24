@@ -110,11 +110,26 @@ export default function Profile() {
             profileData = { uid: user.uid, ...newProfileData } as UserProfile;
           }
 
-          // Fetch listings count
+          // Fetch listings count - use enhanced seller ID resolution
           const listingsRef = collection(db, "listings");
-          const qListings = query(listingsRef, where("sellerId", "==", user.uid));
-          const listingsSnapshot = await getDocs(qListings);
-          profileData.listingsCount = listingsSnapshot.size;
+          const listingsSnapshot = await getDocs(listingsRef);
+          
+          // Filter listings client-side to handle different seller ID field names
+          const userListingsData: Listing[] = [];
+          listingsSnapshot.forEach((doc) => {
+            const data = doc.data();
+            const sellerId = data.sellerId || 
+                           data.userId || 
+                           data.createdBy || 
+                           data.seller?.userId || 
+                           '';
+            
+            if (sellerId === user.uid) {
+              userListingsData.push({ id: doc.id, ...data } as Listing);
+            }
+          });
+          
+          profileData.listingsCount = userListingsData.length;
 
           // Fetch reviews count and calculate rating
           const reviewsRef = collection(db, "reviews");
@@ -132,7 +147,7 @@ export default function Profile() {
           profileData.rating = reviewsSnapshot.size > 0 ? parseFloat((totalRating / reviewsSnapshot.size).toFixed(1)) : 0;
 
           setUserProfile(profileData);
-          setUserListings(listingsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Listing)));
+          setUserListings(userListingsData); // Use the filtered user listings data
           setUserReviews(fetchedReviews);
 
           // Initialize edit form states
@@ -462,13 +477,22 @@ export default function Profile() {
                       key={listing.id}
                       id={listing.id}
                       title={listing.title}
-                      price={listing.price}
+                      price={`$${parseFloat(listing.price).toFixed(2)}`}
                       condition={listing.condition}
                       description={listing.description}
-                      image={listing.image}
-                      seller={listing.seller}
+                      image={listing.imageUrl || "/placeholder.svg"}
+                      seller={listing.seller || { 
+                        name: userProfile?.name || "Unknown Seller", 
+                        userId: userProfile?.uid || "", 
+                        university: userProfile?.university || "Unknown", 
+                        rating: userProfile?.rating || 0 
+                      }}
                       category={listing.category}
-                      isService={listing.isService}
+                      isService={listing.category === "Services"}
+                      locations={listing.locations}
+                      deliveryRadius={listing.deliveryRadius}
+                      isAvailable={listing.isAvailable}
+                      availabilityStatus={listing.availabilityStatus}
                     />
                   ))}
                 </div>
