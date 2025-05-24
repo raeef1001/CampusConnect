@@ -105,7 +105,7 @@ Analyze this image and create a marketplace listing for a student marketplace pl
 
 1. A clear, descriptive title (max 60 characters)
 2. A detailed description (2-3 sentences)
-3. The most appropriate categories from: Electronics, Textbooks, Services, Furniture, Academic Supplies, Other. Provide up to 3 categories, comma-separated.
+3. The most appropriate categories from: Apparel, Electronics, Textbooks, Furniture, Home Goods, Sporting Goods, Academic Supplies, Vehicles, Other. Provide up to 3 categories, comma-separated, choosing the most specific and relevant ones.
 4. The condition from: New, Like New, Good, Used, Fair
 5. A suggested price in USD (consider this is a student marketplace, so prices should be reasonable)
 6. Your confidence level (0-100) in the analysis
@@ -137,17 +137,23 @@ Be specific about what you see in the image. If it's a textbook, include the sub
     // Parse the response
     const titleMatch = text.match(/TITLE:\s*(.+)/);
     const descriptionMatch = text.match(/DESCRIPTION:\s*(.+)/);
-    const categoriesMatch = text.match(/CATEGORIES:\s*\[(.+)\]/); // Updated regex for array
+    const categoriesMatch = text.match(/CATEGORIES:\s*(?:\[(.+)\]|(.+))/); // Make brackets optional
     const conditionMatch = text.match(/CONDITION:\s*(.+)/);
     const priceMatch = text.match(/PRICE:\s*(\d+)/);
     const confidenceMatch = text.match(/CONFIDENCE:\s*(\d+)/);
 
     if (titleMatch && descriptionMatch && categoriesMatch && conditionMatch && priceMatch) {
-      const categories = categoriesMatch[1].split(',').map(cat => cat.trim()); // Parse categories
+      let categories: string[] = [];
+      if (categoriesMatch[1]) { // Matched with brackets
+        categories = categoriesMatch[1].split(',').map(cat => cat.trim());
+      } else if (categoriesMatch[2]) { // Matched without brackets
+        categories = [categoriesMatch[2].trim()];
+      }
+
       return {
         title: titleMatch[1].trim(),
         description: descriptionMatch[1].trim(),
-        categories: categories, // Use parsed categories
+        categories: categories,
         condition: conditionMatch[1].trim(),
         suggestedPrice: parseInt(priceMatch[1]),
         confidence: confidenceMatch ? parseInt(confidenceMatch[1]) : 75
