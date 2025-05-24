@@ -1,8 +1,8 @@
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation, Outlet } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import Landing from "./pages/Landing";
@@ -19,6 +19,7 @@ import ListingDetails from "./pages/ListingDetails";
 import Admin from "./pages/Admin";
 import AdminSetup from "./pages/AdminSetup";
 import CartPage from "./pages/Cart"; // Import CartPage
+import ModerationPage from "./pages/ModerationPage"; // New import for moderation page
 import NotFound from "./pages/NotFound";
 import { auth } from "./lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
@@ -225,7 +226,9 @@ const AnimatedRoutes = ({ isAuthenticated }: AnimatedRoutesProps) => {
           >
             {isAuthenticated ? <Admin /> : <Navigate to="/auth" />}
           </motion.div>
-        } />
+        }>
+          <Route path="moderation" element={<ModerationPage />} />
+        </Route>
         <Route path="/admin-setup" element={
           <motion.div
             key="admin-setup"
