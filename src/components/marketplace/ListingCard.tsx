@@ -293,10 +293,24 @@ export function ListingCard({
         </CardContent>
         
         <CardFooter className="pt-0 px-4 pb-4">
-          <Button className="w-full gap-2 text-base py-5 bg-warm-50 hover:bg-warm-100 text-warm-700" variant="ghost" onClick={handleContactSeller}>
-            <MessageSquare className="h-4 w-4" />
-            Contact Seller
-          </Button>
+          {isAvailable !== false && availabilityStatus === 'available' ? (
+            <Button className="w-full gap-2 text-base py-5 bg-warm-50 hover:bg-warm-100 text-warm-700" variant="ghost" onClick={handleContactSeller}>
+              <MessageSquare className="h-4 w-4" />
+              Contact Seller
+            </Button>
+          ) : (
+            <Button 
+              className="w-full gap-2 text-base py-5 cursor-not-allowed opacity-60" 
+              variant="outline" 
+              disabled
+            >
+              <MessageSquare className="h-4 w-4" />
+              {availabilityStatus === 'sold' && 'Item Sold'}
+              {availabilityStatus === 'reserved' && 'Item Reserved'}
+              {availabilityStatus === 'unavailable' && 'Unavailable'}
+              {!availabilityStatus && 'Unavailable'}
+            </Button>
+          )}
         </CardFooter>
       </Card>
     </Link>
