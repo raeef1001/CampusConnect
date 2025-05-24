@@ -25,7 +25,7 @@ export default function CreateListing() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState('');
-  const [category, setCategory] = useState('');
+  const [categories, setCategories] = useState<string[]>([]); // Changed to array
   const [condition, setCondition] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -38,7 +38,7 @@ export default function CreateListing() {
   const handleImageAnalysisComplete = (result: ImageAnalysisResult) => {
     setTitle(result.title);
     setDescription(result.description);
-    setCategory(result.category);
+    setCategories(result.categories); // Use categories array
     setCondition(result.condition);
     setPrice(result.suggestedPrice.toString());
     setAiAnalyzed(true);
@@ -158,7 +158,7 @@ export default function CreateListing() {
         title,
         description,
         price: parseFloat(price),
-        category,
+        categories, // Use categories array
         condition,
         imageUrl, // Use the uploaded image URL
         sellerId: user.uid, // Use sellerId to match Listing interface
@@ -218,10 +218,10 @@ export default function CreateListing() {
                     />
                     
                     {/* Price Advisor - Only show after basic details are filled */}
-                    {(title || category || description) && (
+                    {(title || categories.length > 0 || description) && (
                       <PriceAdvisor
                         title={title}
-                        category={category}
+                        category={categories.join(', ')} // Pass categories as a comma-separated string
                         condition={condition}
                         description={description}
                         onPriceSuggestion={handlePriceSuggestion}
@@ -303,29 +303,17 @@ export default function CreateListing() {
                           </div>
 
                           <div className="space-y-2">
-                            <Label htmlFor="category">Category</Label>
-                            <Select 
-                              value={category} 
-                              onValueChange={setCategory} 
+                            <Label htmlFor="categories">Categories (comma-separated)</Label>
+                            <Textarea
+                              id="categories"
+                              placeholder="e.g., Electronics, Laptops, Used"
+                              value={categories.join(', ')} // Display as comma-separated string
+                              onChange={(e) => setCategories(e.target.value.split(',').map(cat => cat.trim()))}
                               required
-                            >
-                              <SelectTrigger 
-                                id="category"
-                                className={aiAnalyzed ? "border-purple-200 bg-purple-50/30" : ""}
-                              >
-                                <SelectValue placeholder="Select a category" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="Electronics">Electronics</SelectItem>
-                                <SelectItem value="Textbooks">Textbooks</SelectItem>
-                                <SelectItem value="Services">Services</SelectItem>
-                                <SelectItem value="Furniture">Furniture</SelectItem>
-                                <SelectItem value="Academic Supplies">Academic Supplies</SelectItem>
-                                <SelectItem value="Other">Other</SelectItem>
-                              </SelectContent>
-                            </Select>
+                              className={aiAnalyzed ? "border-purple-200 bg-purple-50/30" : ""}
+                            />
                             {aiAnalyzed && (
-                              <p className="text-xs text-purple-600">✨ AI detected category</p>
+                              <p className="text-xs text-purple-600">✨ AI detected categories - feel free to edit</p>
                             )}
                           </div>
                         </div>
@@ -358,15 +346,20 @@ export default function CreateListing() {
                         {/* Delivery Radius Setting */}
                         <div className="space-y-2">
                           <Label htmlFor="delivery-radius">Delivery Radius (km)</Label>
-                          <Input 
-                            id="delivery-radius" 
-                            type="number" 
-                            placeholder="e.g., 5" 
-                            value={deliveryRadius}
-                            onChange={(e) => setDeliveryRadius(Number(e.target.value))}
-                            min="1"
-                            max="20"
-                          />
+                          <Select 
+                            value={deliveryRadius.toString()} 
+                            onValueChange={(value) => setDeliveryRadius(Number(value))}
+                          >
+                            <SelectTrigger id="delivery-radius">
+                              <SelectValue placeholder="Select a radius" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="5">5 km</SelectItem>
+                              <SelectItem value="10">10 km</SelectItem>
+                              <SelectItem value="15">15 km</SelectItem>
+                              <SelectItem value="20">20 km</SelectItem>
+                            </SelectContent>
+                          </Select>
                           <p className="text-xs text-gray-500">
                             Maximum distance you're willing to deliver products from your main location
                           </p>

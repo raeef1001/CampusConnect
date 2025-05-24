@@ -42,6 +42,7 @@ export default function Listings() {
   const [firstVisible, setFirstVisible] = useState<QueryDocumentSnapshot | null>(null);
   const [hasMore, setHasMore] = useState(true);
   const [hasPrevious, setHasPrevious] = useState(false);
+  const [totalListingsCount, setTotalListingsCount] = useState(0); // New state for total count
 
   // Filter states
   const [filters, setFilters] = useState<FilterState>({
@@ -88,6 +89,19 @@ export default function Listings() {
 
     const listingsCollectionRef = collection(db, "listings");
     let baseQuery: Query = query(listingsCollectionRef, orderBy("createdAt", "desc"));
+
+    // Fetch total count for pagination display (Note: This can be inefficient for very large collections)
+    const fetchTotalCount = async () => {
+      try {
+        const totalCountQuery = query(baseQuery); // Use the same baseQuery for counting
+        const totalCountSnapshot = await getDocs(totalCountQuery);
+        setTotalListingsCount(totalCountSnapshot.size);
+      } catch (error) {
+        console.error("Error fetching total listings count:", error);
+        setTotalListingsCount(0); // Fallback to 0 on error
+      }
+    };
+    fetchTotalCount();
 
     // Apply filters
     // Note: Search query is handled client-side due to Firestore limitations for 'contains' queries.
@@ -143,50 +157,65 @@ export default function Listings() {
                 getDocs(listingsBatchQuery).then(async (snapshot) => {
                   const batchListings: Listing[] = [];
                   for (const docSnapshot of snapshot.docs) {
-                    const listing = { id: docSnapshot.id, ...docSnapshot.data() } as Listing;
-          if (listing.sellerId) {
-            try {
-              const userDocRef = doc(db, "users", listing.sellerId);
-              const userDocSnap = await getDoc(userDocRef);
-              if (userDocSnap.exists()) {
-                listing.seller = { userId: listing.sellerId, ...userDocSnap.data() } as SellerProfile;
-              } else {
-                // If user profile doesn't exist, use the provided sellerId with default unknown values
-                listing.seller = {
-                  userId: listing.sellerId, // Use the actual sellerId
-                  name: "Unknown Seller",
-                  avatar: undefined,
-                  university: "Unknown University",
-                  rating: 0,
-                };
-                console.warn(`Seller profile not found for userId: ${listing.sellerId}`);
-              }
-            } catch (error) {
-              console.error("Error fetching seller profile for bookmarked listing:", listing.id, error);
-              listing.seller = {
-                userId: listing.sellerId, // Use the actual sellerId
-                name: "Unknown Seller",
-                avatar: undefined,
-                university: "Unknown University",
-                rating: 0,
-              };
+                    const data = docSnapshot.data();
+                    let sellerData: SellerProfile = data.seller || {}; // Initialize with existing seller data
+
+                    // If seller data is incomplete or missing, fetch from users collection
+                    if (!sellerData.name || sellerData.name === "Unknown Seller" || !sellerData.university || sellerData.university === "Unknown University") {
+                      const userIdToFetch = data.userId || data.sellerId; // Prefer userId, fallback to sellerId
+                      if (userIdToFetch) {
+                        try {
+                          const userDocRef = doc(db, "users", userIdToFetch);
+                          const userDocSnap = await getDoc(userDocRef);
+                          if (userDocSnap.exists()) {
+                            const userData = userDocSnap.data();
+                            sellerData = {
+                              userId: userIdToFetch,
+                              name: userData.name || userData.email?.split('@')[0] || "Unknown Seller",
+                              avatar: userData.avatar || "",
+                              university: userData.university || "Unknown University",
+                              rating: userData.rating || 0,
+                            };
+                          } else {
+                            // User profile not found, use default unknown seller
+                            sellerData = {
+                              userId: userIdToFetch,
+                              name: "Unknown Seller",
+                              avatar: "",
+                              university: "Unknown University",
+                              rating: 0,
+                            };
+                            console.warn(`Seller profile not found for userId: ${userIdToFetch}`);
+                          }
+                        } catch (userFetchError) {
+                          console.error(`Error fetching user profile for ${userIdToFetch}:`, userFetchError);
+                          // Fallback to default unknown seller on error
+                          sellerData = {
+                            userId: userIdToFetch,
+                            name: "Unknown Seller",
+                            avatar: "",
+                            university: "Unknown University",
+                            rating: 0,
+                          };
+                        }
+                      } else {
+                        // No userId or sellerId available, use default unknown seller
+                        sellerData = {
+                          userId: "",
+                          name: "Unknown Seller",
+                          avatar: "",
+                          university: "Unknown University",
+                          rating: 0,
+                        };
+                      }
+                    }
+                    const listing = { id: docSnapshot.id, ...data, seller: sellerData } as Listing;
+                    batchListings.push(listing);
+                  }
+                  return batchListings;
+                })
+              );
             }
-          } else {
-            // Fallback for bookmarked listings without sellerId
-            listing.seller = {
-              userId: "unknown_seller_id", // Use a placeholder ID if sellerId is completely missing
-              name: "Unknown Seller",
-              avatar: undefined,
-              university: "Unknown University",
-              rating: 0,
-            };
-          }
-          batchListings.push(listing);
-        }
-        return batchListings;
-      })
-    );
-  }
   const allFetchedListings = (await Promise.all(listingBatches)).flat();
   setListings(allFetchedListings);
 } else {
@@ -213,49 +242,68 @@ unsubscribe = onSnapshot(paginatedQuery, async (snapshot) => {
   const hasMoreResults = fetchedDocs.length > listingsPerPage;
   const listingsToDisplay = hasMoreResults ? fetchedDocs.slice(0, listingsPerPage) : fetchedDocs;
 
-  let listingsData: Listing[] = [];
-  for (const docSnapshot of listingsToDisplay) {
-    const listing = { id: docSnapshot.id, ...docSnapshot.data() } as Listing;
+    let listingsData: Listing[] = [];
+    for (const docSnapshot of listingsToDisplay) {
+      const data = docSnapshot.data();
+      let sellerData: SellerProfile = data.seller || {}; // Initialize with existing seller data
 
-    if (listing.sellerId) { // Use sellerId from listing
-      try {
-        const userDocRef = doc(db, "users", listing.sellerId);
-        const userDocSnap = await getDoc(userDocRef);
-        if (userDocSnap.exists()) {
-          listing.seller = { userId: listing.sellerId, ...userDocSnap.data() } as SellerProfile;
+      // If seller data is incomplete or missing, fetch from users collection
+      if (!sellerData.name || sellerData.name === "Unknown Seller" || !sellerData.university || sellerData.university === "Unknown University") {
+        const userIdToFetch = data.userId || data.sellerId; // Prefer userId, fallback to sellerId
+        if (userIdToFetch) {
+          try {
+            const userDocRef = doc(db, "users", userIdToFetch);
+            const userDocSnap = await getDoc(userDocRef);
+            if (userDocSnap.exists()) {
+              const userData = userDocSnap.data();
+              sellerData = {
+                userId: userIdToFetch,
+                name: userData.name || userData.email?.split('@')[0] || "Unknown Seller",
+                avatar: userData.avatar || "",
+                university: userData.university || "Unknown University",
+                rating: userData.rating || 0,
+              };
+            } else {
+              // User profile not found, use default unknown seller
+              sellerData = {
+                userId: userIdToFetch,
+                name: "Unknown Seller",
+                avatar: "",
+                university: "Unknown University",
+                rating: 0,
+              };
+              console.warn(`Seller profile not found for userId: ${userIdToFetch}`);
+            }
+          } catch (userFetchError) {
+            console.error(`Error fetching user profile for ${userIdToFetch}:`, userFetchError);
+            // Fallback to default unknown seller on error
+            sellerData = {
+              userId: userIdToFetch,
+              name: "Unknown Seller",
+              avatar: "",
+              university: "Unknown University",
+              rating: 0,
+            };
+          }
         } else {
-          // If user profile doesn't exist, use the provided sellerId with default unknown values
-          listing.seller = {
-            userId: listing.sellerId, // Use the actual sellerId
+          // No userId or sellerId available, use default unknown seller
+          sellerData = {
+            userId: "",
             name: "Unknown Seller",
-            avatar: undefined,
+            avatar: "",
             university: "Unknown University",
             rating: 0,
           };
-          console.warn(`Seller profile not found for userId: ${listing.sellerId}`);
         }
-      } catch (error) {
-        console.error("Error fetching seller profile for listing:", listing.id, error);
-        listing.seller = {
-          userId: listing.sellerId, // Use the actual sellerId
-          name: "Unknown Seller",
-          avatar: undefined,
-          university: "Unknown University",
-          rating: 0,
-        };
       }
-    } else {
-      // Fallback for listings without sellerId
-      listing.seller = {
-        userId: "unknown_seller_id", // Use a placeholder ID if sellerId is completely missing
-        name: "Unknown Seller",
-        avatar: undefined,
-        university: "Unknown University",
-        rating: 0,
-      };
+
+      const listing = {
+        id: docSnapshot.id,
+        ...data,
+        seller: sellerData,
+      } as Listing;
+      listingsData.push(listing);
     }
-    listingsData.push(listing);
-  }
 
   // Client-side filtering for search query (product title/description)
   if (searchQuery) {
@@ -292,16 +340,12 @@ fetchListings();
 return () => unsubscribe();
 }, [location.search, currentPage, filters, searchQuery, sellerNameFilter]); // Re-run effect when location.search, currentPage, filters, searchQuery, or sellerNameFilter change
 
-  const handleNextPage = () => {
-    if (hasMore) {
-      setCurrentPage((prev) => prev + 1);
-    }
-  };
+  const totalPages = Math.ceil(totalListingsCount / listingsPerPage);
 
-  const handlePreviousPage = () => {
-    if (hasPrevious) {
-      setCurrentPage((prev) => prev - 1);
-    }
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    setLastVisible(null); // Reset lastVisible to re-fetch from the beginning of the new page
+    setFirstVisible(null); // Reset firstVisible as well
   };
 
   return (
@@ -349,9 +393,9 @@ return () => unsubscribe();
                           condition={listing.condition}
                           description={listing.description}
                           image={listing.imageUrl || "/placeholder.svg"}
-                          category={listing.category}
+                          category={listing.categories?.join(', ') || ''} // Display categories as comma-separated string, handle undefined categories
                           seller={listing.seller || { name: "Unknown Seller", userId: "", university: "Unknown", rating: 0 }}
-                          isService={listing.category === "Services"}
+                          isService={listing.categories?.includes("Services") || false} // Check if categories array includes "Services"
                           locations={listing.locations}
                           deliveryRadius={listing.deliveryRadius}
                           isAvailable={listing.isAvailable}
@@ -366,23 +410,30 @@ return () => unsubscribe();
                   </div>
 
                   {/* Pagination */}
-                  {listings.length > 0 && (
+                  {totalListingsCount > 0 && ( // Only show pagination if there are listings
                     <div className="mt-8 flex justify-center">
                       <Pagination>
                         <PaginationContent>
                           <PaginationItem>
                             <PaginationPrevious 
-                              onClick={handlePreviousPage} 
-                              className={!hasPrevious ? "pointer-events-none opacity-50" : undefined} 
+                              onClick={() => handlePageChange(currentPage - 1)} 
+                              className={currentPage === 1 ? "pointer-events-none opacity-50" : undefined} 
                             />
                           </PaginationItem>
-                          <PaginationItem>
-                            <PaginationLink>{currentPage}</PaginationLink>
-                          </PaginationItem>
+                          {Array.from({ length: totalPages }, (_, i) => (
+                            <PaginationItem key={i + 1}>
+                              <PaginationLink 
+                                onClick={() => handlePageChange(i + 1)} 
+                                isActive={currentPage === i + 1}
+                              >
+                                {i + 1}
+                              </PaginationLink>
+                            </PaginationItem>
+                          ))}
                           <PaginationItem>
                             <PaginationNext 
-                              onClick={handleNextPage} 
-                              className={!hasMore ? "pointer-events-none opacity-50" : undefined} 
+                              onClick={() => handlePageChange(currentPage + 1)} 
+                              className={currentPage === totalPages ? "pointer-events-none opacity-50" : undefined} 
                             />
                           </PaginationItem>
                         </PaginationContent>

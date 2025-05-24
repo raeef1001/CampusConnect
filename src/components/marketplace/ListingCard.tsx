@@ -24,7 +24,7 @@ interface LocationData {
   id: string;
   lat: number;
   lng: number;
-  type: 'main' | 'delivery';
+  type: 'main' | 'delivery' | 'pickup'; // Added 'pickup'
   name?: string;
 }
 

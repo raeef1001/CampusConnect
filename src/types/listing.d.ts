@@ -3,7 +3,7 @@ export interface LocationData {
   id: string;
   lat: number;
   lng: number;
-  type: 'main' | 'delivery';
+  type: 'main' | 'delivery' | 'pickup';
   name?: string;
 }
 
@@ -15,7 +15,7 @@ export interface Listing {
   image: string;
   imageUrl: string; // Add imageUrl property for database compatibility
   sellerId: string;
-  category: string;
+  categories: string[]; // Changed to array of strings
   condition: string;
   location: string; // Keep for backward compatibility
   locations?: LocationData[]; // New multi-location support
