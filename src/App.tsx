@@ -18,12 +18,26 @@ import EditListing from "./pages/EditListing";
 import ListingDetails from "./pages/ListingDetails";
 import Admin from "./pages/Admin";
 import AdminSetup from "./pages/AdminSetup";
+<<<<<<< HEAD
 import CartPage from "./pages/Cart"; // Import CartPage
 import ModerationPage from "./pages/ModerationPage"; // New import for moderation page
 import NotFound from "./pages/NotFound";
 import { auth } from "./lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { CartProvider } from "./context/CartContext"; // Import CartProvider
+=======
+import CartPage from "./pages/Cart";
+import CheckoutPage from "./pages/Checkout";
+import MyBidsPage from "./pages/MyBids";
+import ReceivedBidsPage from "./pages/ReceivedBids";
+import IncomingOrdersPage from "./pages/IncomingOrders";
+import OutgoingOrdersPage from "./pages/OutgoingOrders";
+import ModerationPage from "./pages/ModerationPage";
+import NotFound from "./pages/NotFound";
+import { auth } from "./lib/firebase";
+import { onAuthStateChanged } from "firebase/auth";
+import { CartProvider } from "./context/CartContext";
+>>>>>>> f4fe690e00dd5322027e4ca7da1a28e707a1b779
 
 const queryClient = new QueryClient();
 
@@ -49,7 +63,11 @@ const App = () => {
       <TooltipProvider>
         <Toaster />
         <Sonner />
+<<<<<<< HEAD
         <CartProvider> {/* Wrap with CartProvider */}
+=======
+        <CartProvider>
+>>>>>>> f4fe690e00dd5322027e4ca7da1a28e707a1b779
           <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
             <AnimatedRoutes isAuthenticated={isAuthenticated} />
           </BrowserRouter>
@@ -215,7 +233,46 @@ const AnimatedRoutes = ({ isAuthenticated }: AnimatedRoutesProps) => {
             {isAuthenticated ? <EditListing /> : <Navigate to="/auth" />}
           </motion.div>
         } />
+<<<<<<< HEAD
         <Route path="/admin" element={isAuthenticated ? <Admin /> : <Navigate to="/auth" />}>
+=======
+        <Route path="/cart" element={
+          <motion.div
+            key="cart-page"
+            initial="initial"
+            animate="in"
+            exit="out"
+            variants={pageVariants}
+            transition={pageTransition}
+          >
+            {isAuthenticated ? <CartPage /> : <Navigate to="/auth" />}
+          </motion.div>
+        } />
+        <Route path="/checkout" element={
+          <motion.div
+            key="checkout"
+            initial="initial"
+            animate="in"
+            exit="out"
+            variants={pageVariants}
+            transition={pageTransition}
+          >
+            {isAuthenticated ? <CheckoutPage /> : <Navigate to="/auth" />}
+          </motion.div>
+        } />
+        <Route path="/admin" element={
+          <motion.div
+            key="admin"
+            initial="initial"
+            animate="in"
+            exit="out"
+            variants={pageVariants}
+            transition={pageTransition}
+          >
+            {isAuthenticated ? <Admin /> : <Navigate to="/auth" />}
+          </motion.div>
+        }>
+>>>>>>> f4fe690e00dd5322027e4ca7da1a28e707a1b779
           <Route path="moderation" element={<ModerationPage />} />
         </Route>
         <Route path="/admin-setup" element={
@@ -230,16 +287,62 @@ const AnimatedRoutes = ({ isAuthenticated }: AnimatedRoutesProps) => {
             {isAuthenticated ? <AdminSetup /> : <Navigate to="/auth" />}
           </motion.div>
         } />
+<<<<<<< HEAD
         <Route path="/cart" element={
           <motion.div
             key="cart-page"
+=======
+        <Route path="/bids/my-bids" element={
+          <motion.div
+            key="my-bids"
+>>>>>>> f4fe690e00dd5322027e4ca7da1a28e707a1b779
             initial="initial"
             animate="in"
             exit="out"
             variants={pageVariants}
             transition={pageTransition}
           >
+<<<<<<< HEAD
             {isAuthenticated ? <CartPage /> : <Navigate to="/auth" />}
+=======
+            {isAuthenticated ? <MyBidsPage /> : <Navigate to="/auth" />}
+          </motion.div>
+        } />
+        <Route path="/bids/received" element={
+          <motion.div
+            key="received-bids"
+            initial="initial"
+            animate="in"
+            exit="out"
+            variants={pageVariants}
+            transition={pageTransition}
+          >
+            {isAuthenticated ? <ReceivedBidsPage /> : <Navigate to="/auth" />}
+          </motion.div>
+        } />
+        <Route path="/orders/outgoing" element={
+          <motion.div
+            key="outgoing-orders"
+            initial="initial"
+            animate="in"
+            exit="out"
+            variants={pageVariants}
+            transition={pageTransition}
+          >
+            {isAuthenticated ? <OutgoingOrdersPage /> : <Navigate to="/auth" />}
+          </motion.div>
+        } />
+        <Route path="/orders/incoming" element={
+          <motion.div
+            key="incoming-orders"
+            initial="initial"
+            animate="in"
+            exit="out"
+            variants={pageVariants}
+            transition={pageTransition}
+          >
+            {isAuthenticated ? <IncomingOrdersPage /> : <Navigate to="/auth" />}
+>>>>>>> f4fe690e00dd5322027e4ca7da1a28e707a1b779
           </motion.div>
         } />
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

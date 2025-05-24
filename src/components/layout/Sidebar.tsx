@@ -1,4 +1,3 @@
-
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -13,7 +12,15 @@ import {
   ChevronLeft,
   ChevronRight,
   Bell, // Added Bell import
+<<<<<<< HEAD
   Bookmark // Added Bookmark import
+=======
+  Bookmark, // Added Bookmark import
+  DollarSign, // Added DollarSign import for bidding
+  TrendingUp, // Added TrendingUp import for received bids
+  ShoppingBag, // Added ShoppingBag import for incoming orders
+  ShoppingCart // Added ShoppingCart import for outgoing orders
+>>>>>>> f4fe690e00dd5322027e4ca7da1a28e707a1b779
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton"; // Added Skeleton import
@@ -43,6 +50,13 @@ const menuItems = (unreadNotificationsCount: number, unreadMessagesCount: number
   { icon: Package, label: "All Listings", href: "/listings" },
   { icon: Package, label: "My Listings", href: "/listings?filter=my-listings" },
   { icon: Bookmark, label: "Bookmarked Products", href: "/listings?filter=bookmarked-listings" },
+<<<<<<< HEAD
+=======
+  { icon: DollarSign, label: "My Bids", href: "/bids/my-bids" },
+  { icon: TrendingUp, label: "Received Bids", href: "/bids/received" },
+  { icon: ShoppingCart, label: "My Orders", href: "/orders/outgoing" },
+  { icon: ShoppingBag, label: "Incoming Orders", href: "/orders/incoming" },
+>>>>>>> f4fe690e00dd5322027e4ca7da1a28e707a1b779
   { icon: MessageSquare, label: "Messages", href: "/messages", badge: unreadMessagesCount > 0 ? unreadMessagesCount : undefined },
   { icon: Bell, label: "Notifications", href: "/notifications", badge: unreadNotificationsCount > 0 ? unreadNotificationsCount : undefined }, // Use dynamic count
   { icon: User, label: "Profile", href: "/profile" },

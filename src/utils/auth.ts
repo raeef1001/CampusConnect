@@ -2,8 +2,16 @@ import { auth } from '../lib/firebase';
 import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
+<<<<<<< HEAD
   createUserWithEmailAndPassword, // Add this import
   signOut,
+=======
+  createUserWithEmailAndPassword,
+  signOut,
+  signInWithPopup,
+  GoogleAuthProvider,
+  GithubAuthProvider,
+>>>>>>> f4fe690e00dd5322027e4ca7da1a28e707a1b779
   User,
 } from 'firebase/auth';
 
@@ -63,4 +71,64 @@ export const logout = async () => {
     }
     throw error;
   }
+<<<<<<< HEAD
+=======
+};
+
+// Google OAuth login
+export const signInWithGoogle = async () => {
+  try {
+    const provider = new GoogleAuthProvider();
+    provider.addScope('email');
+    provider.addScope('profile');
+    
+    const result = await signInWithPopup(auth, provider);
+    currentUser = result.user;
+    
+    // Check if the user's email is from a university domain
+    if (result.user.email && !result.user.email.endsWith('.edu')) {
+      // Sign out the user if not from university domain
+      await signOut(auth);
+      currentUser = null;
+      throw new Error('Only university emails (.edu) are allowed for signup.');
+    }
+    
+    return result.user;
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      console.error("Error signing in with Google:", error.message);
+    } else {
+      console.error("An unknown error occurred during Google sign in.");
+    }
+    throw error;
+  }
+};
+
+// GitHub OAuth login
+export const signInWithGitHub = async () => {
+  try {
+    const provider = new GithubAuthProvider();
+    provider.addScope('user:email');
+    
+    const result = await signInWithPopup(auth, provider);
+    currentUser = result.user;
+    
+    // Check if the user's email is from a university domain
+    if (result.user.email && !result.user.email.endsWith('.edu')) {
+      // Sign out the user if not from university domain
+      await signOut(auth);
+      currentUser = null;
+      throw new Error('Only university emails (.edu) are allowed for signup.');
+    }
+    
+    return result.user;
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      console.error("Error signing in with GitHub:", error.message);
+    } else {
+      console.error("An unknown error occurred during GitHub sign in.");
+    }
+    throw error;
+  }
+>>>>>>> f4fe690e00dd5322027e4ca7da1a28e707a1b779
 };
