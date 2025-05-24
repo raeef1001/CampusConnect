@@ -220,8 +220,6 @@ const AnimatedRoutes = ({ isAuthenticated }: AnimatedRoutesProps) => {
             {isAuthenticated ? <EditListing /> : <Navigate to="/auth" />}
           </motion.div>
         } />
-<<<<<<< HEAD
-=======
         <Route path="/cart" element={
           <motion.div
             key="cart-page"
@@ -234,7 +232,18 @@ const AnimatedRoutes = ({ isAuthenticated }: AnimatedRoutesProps) => {
             {isAuthenticated ? <CartPage /> : <Navigate to="/auth" />}
           </motion.div>
         } />
->>>>>>> 8f57a62ebb78490f8a5dffa905407a4bbb8c8bae
+        <Route path="/checkout" element={
+          <motion.div
+            key="checkout"
+            initial="initial"
+            animate="in"
+            exit="out"
+            variants={pageVariants}
+            transition={pageTransition}
+          >
+            {isAuthenticated ? <CheckoutPage /> : <Navigate to="/auth" />}
+          </motion.div>
+        } />
         <Route path="/admin" element={
           <motion.div
             key="admin"
@@ -261,37 +270,6 @@ const AnimatedRoutes = ({ isAuthenticated }: AnimatedRoutesProps) => {
             {isAuthenticated ? <AdminSetup /> : <Navigate to="/auth" />}
           </motion.div>
         } />
-<<<<<<< HEAD
-        <Route path="/cart" element={
-          <motion.div
-            key="cart-page"
-=======
-        <Route path="/bids/my-bids" element={
-          <motion.div
-            key="my-bids"
->>>>>>> 8f57a62ebb78490f8a5dffa905407a4bbb8c8bae
-            initial="initial"
-            animate="in"
-            exit="out"
-            variants={pageVariants}
-            transition={pageTransition}
-          >
-<<<<<<< HEAD
-            {isAuthenticated ? <CartPage /> : <Navigate to="/auth" />}
-          </motion.div>
-        } />
-        <Route path="/checkout" element={
-          <motion.div
-            key="checkout"
-            initial="initial"
-            animate="in"
-            exit="out"
-            variants={pageVariants}
-            transition={pageTransition}
-          >
-            {isAuthenticated ? <CheckoutPage /> : <Navigate to="/auth" />}
-          </motion.div>
-        } />
         <Route path="/bids/my-bids" element={
           <motion.div
             key="my-bids"
@@ -301,8 +279,6 @@ const AnimatedRoutes = ({ isAuthenticated }: AnimatedRoutesProps) => {
             variants={pageVariants}
             transition={pageTransition}
           >
-=======
->>>>>>> 8f57a62ebb78490f8a5dffa905407a4bbb8c8bae
             {isAuthenticated ? <MyBidsPage /> : <Navigate to="/auth" />}
           </motion.div>
         } />
