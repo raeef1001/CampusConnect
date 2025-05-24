@@ -43,15 +43,16 @@ export function ListingCard({
   condition, 
   description, 
   image, 
-  seller, 
+  seller, // Seller prop is now expected to be complete
   category, 
   isService = false 
 }: ListingCardProps) {
   const [isFavorited, setIsFavorited] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
-  const [sellerProfile, setSellerProfile] = useState<SellerProfile | null>(null);
-  const [loadingSeller, setLoadingSeller] = useState(true);
+  // sellerProfile and loadingSeller states are no longer needed as seller prop is complete
+  // const [sellerProfile, setSellerProfile] = useState<SellerProfile | null>(null);
+  // const [loadingSeller, setLoadingSeller] = useState(true);
 
   useEffect(() => {
     const checkFavoriteStatus = async () => {
@@ -67,42 +68,7 @@ export function ListingCard({
       }
     };
     checkFavoriteStatus();
-
-    const fetchSellerProfile = async () => {
-      if (!seller || !seller.userId) {
-        console.warn("Seller or seller.userId is undefined for listing:", id);
-        setLoadingSeller(false);
-        return;
-      }
-      try {
-        const userDocRef = doc(db, "users", seller.userId);
-        const userDocSnap = await getDoc(userDocRef);
-        if (userDocSnap.exists()) {
-          setSellerProfile(userDocSnap.data() as SellerProfile);
-        } else {
-          // Fallback if user document doesn't exist but seller data is provided
-          setSellerProfile({
-            name: seller.name,
-            avatar: seller.avatar,
-            university: seller.university,
-            rating: seller.rating,
-          });
-        }
-      } catch (error) {
-        console.error("Error fetching seller profile:", error);
-        // Fallback on error
-        setSellerProfile({
-          name: seller.name,
-          avatar: seller.avatar,
-          university: seller.university,
-          rating: seller.rating,
-        });
-      } finally {
-        setLoadingSeller(false);
-      }
-    };
-    fetchSellerProfile();
-  }, [id, seller?.userId, seller?.name, seller?.avatar, seller?.university, seller?.rating]); // Added dependencies and optional chaining
+  }, [id]); // Only id is needed as a dependency now
 
   const handleFavoriteToggle = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -242,43 +208,30 @@ export function ListingCard({
             </p>
             
             <div className="flex items-center justify-between">
-              {loadingSeller ? (
+              {/* Seller information is now directly available from the seller prop */}
+              {seller && (
                 <div className="flex items-center space-x-2">
-                  <Skeleton className="h-7 w-7 rounded-full" />
+                  <Avatar className="h-7 w-7 border-2 border-background shadow-sm">
+                    {seller.avatar && <AvatarImage src={seller.avatar} />}
+                    <AvatarFallback className="text-xs bg-warm-100 text-warm-800">
+                      {seller.name.split(' ').map(n => n[0]).join('')}
+                    </AvatarFallback>
+                  </Avatar>
                   <div>
-                    <Skeleton className="h-4 w-24 mb-1" />
-                    <Skeleton className="h-3 w-32" />
-                  </div>
-                </div>
-              ) : (
-                sellerProfile && (
-                  <div className="flex items-center space-x-2">
-                    <Avatar className="h-7 w-7 border-2 border-background shadow-sm">
-                      {sellerProfile.avatar && <AvatarImage src={sellerProfile.avatar} />}
-                      <AvatarFallback className="text-xs bg-warm-100 text-warm-800">
-                        {sellerProfile.name.split(' ').map(n => n[0]).join('')}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <p className="text-sm font-medium">{sellerProfile.name}</p>
-                      <div className="flex items-center space-x-1">
-                        <MapPin className="h-3 w-3 text-muted-foreground" />
-                        <p className="text-xs text-muted-foreground">{sellerProfile.university}</p>
-                      </div>
+                    <p className="text-sm font-medium">{seller.name}</p>
+                    <div className="flex items-center space-x-1">
+                      <MapPin className="h-3 w-3 text-muted-foreground" />
+                      <p className="text-xs text-muted-foreground">{seller.university}</p>
                     </div>
                   </div>
-                )
+                </div>
               )}
               
-              {loadingSeller ? (
-                <Skeleton className="h-6 w-16 rounded" />
-              ) : (
-                sellerProfile && (
-                  <div className="flex items-center space-x-1 bg-warm-50 px-2 py-1 rounded">
-                    <Star className="h-3 w-3 fill-warm-400 text-warm-400" />
-                    <span className="text-sm font-medium text-warm-700">{sellerProfile.rating || 0}</span>
-                  </div>
-                )
+              {seller && (
+                <div className="flex items-center space-x-1 bg-warm-50 px-2 py-1 rounded">
+                  <Star className="h-3 w-3 fill-warm-400 text-warm-400" />
+                  <span className="text-sm font-medium text-warm-700">{seller.rating || 0}</span>
+                </div>
               )}
             </div>
           </div>

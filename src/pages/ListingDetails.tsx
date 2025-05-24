@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { doc, getDoc, collection, addDoc, deleteDoc, query, where, getDocs } from "firebase/firestore";
+import { doc, getDoc, collection, addDoc, deleteDoc, query, where, getDocs, serverTimestamp } from "firebase/firestore";
 import { db, auth } from "@/lib/firebase";
 import { Navbar } from "@/components/layout/Navbar";
 import { Sidebar } from "@/components/layout/Sidebar";
@@ -64,15 +64,36 @@ export default function ListingDetails() {
           setListing(listingData);
 
           // Fetch seller profile
-          const userDocRef = doc(db, "users", listingData.userId);
-          const userDocSnap = await getDoc(userDocRef);
-          if (userDocSnap.exists()) {
-            setSellerProfile(userDocSnap.data() as SellerProfile);
+          if (listingData.userId) {
+            try {
+              const userDocRef = doc(db, "users", listingData.userId);
+              const userDocSnap = await getDoc(userDocRef);
+              if (userDocSnap.exists()) {
+                setSellerProfile(userDocSnap.data() as SellerProfile);
+              } else {
+                // Fallback to listing's userEmail if profile not found
+                setSellerProfile({
+                  name: listingData.userEmail?.split('@')[0] || "Unknown Seller",
+                  avatar: listingData.userEmail ? `https://api.dicebear.com/7.x/initials/svg?seed=${listingData.userEmail}` : undefined,
+                  university: "University Name", // Placeholder
+                  rating: 0, // Placeholder
+                });
+              }
+            } catch (sellerError) {
+              console.error("Error fetching seller profile in ListingDetails:", sellerError);
+              // Fallback on error
+              setSellerProfile({
+                name: listingData.userEmail?.split('@')[0] || "Unknown Seller",
+                avatar: listingData.userEmail ? `https://api.dicebear.com/7.x/initials/svg?seed=${listingData.userEmail}` : undefined,
+                university: "University Name", // Placeholder
+                rating: 0, // Placeholder
+              });
+            }
           } else {
-            // Fallback to listing's userEmail if profile not found
+            console.warn("listingData.userId is missing for listing:", id);
             setSellerProfile({
-              name: listingData.userEmail.split('@')[0],
-              avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${listingData.userEmail}`,
+              name: listingData.userEmail?.split('@')[0] || "Unknown Seller",
+              avatar: listingData.userEmail ? `https://api.dicebear.com/7.x/initials/svg?seed=${listingData.userEmail}` : undefined,
               university: "University Name", // Placeholder
               rating: 0, // Placeholder
             });

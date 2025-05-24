@@ -1,11 +1,21 @@
 import { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom"; // Import useLocation
 import { Navbar } from "@/components/layout/Navbar";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { FloatingChat } from "@/components/ui/floating-chat";
 import { db } from '@/lib/firebase';
-import { collection, query, orderBy, onSnapshot, Timestamp } from 'firebase/firestore';
+import { collection, query, orderBy, where, onSnapshot, Timestamp, doc, getDoc, Query } from 'firebase/firestore';
 import { ListingCard } from "@/components/marketplace/ListingCard";
 import { Skeleton } from "@/components/ui/skeleton";
+import { getUser } from "@/utils/auth";
+
+interface SellerProfile {
+  name: string;
+  avatar?: string;
+  university: string;
+  rating: number;
+  userId: string; // Add userId to SellerProfile
+}
 
 interface Listing {
   id: string;
@@ -17,32 +27,147 @@ interface Listing {
   imageUrl: string;
   userId: string;
   userEmail: string;
-  createdAt: Timestamp; // Firebase Timestamp
+  createdAt: Timestamp;
+  seller?: SellerProfile; // Add optional seller profile
 }
 
 export default function Listings() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
+  const location = useLocation(); // Initialize useLocation
 
   useEffect(() => {
-    const q = query(collection(db, "listings"), orderBy("createdAt", "desc"));
+    const queryParams = new URLSearchParams(location.search);
+    const filter = queryParams.get("filter");
+    const currentUser = getUser();
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const listingsData: Listing[] = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      } as Listing));
-      console.log("Fetched listings:", listingsData); // Add this line for debugging
-      setListings(listingsData);
-      setLoading(false);
-    }, (error) => {
-      console.error("Error fetching listings: ", error);
-      setLoading(false);
-    });
+    let listingsQuery: Query;
+    let unsubscribe: () => void = () => {}; // Initialize with a no-op function
+
+    const fetchListingsAndSellerProfiles = async (q: Query) => {
+      unsubscribe = onSnapshot(q, async (snapshot) => {
+        const listingsData: Listing[] = [];
+        for (const docSnapshot of snapshot.docs) {
+          const listing = { id: docSnapshot.id, ...docSnapshot.data() } as Listing;
+          
+          if (listing.userId) {
+            try {
+              const userDocRef = doc(db, "users", listing.userId);
+              const userDocSnap = await getDoc(userDocRef);
+              if (userDocSnap.exists()) {
+                listing.seller = { userId: listing.userId, ...userDocSnap.data() } as SellerProfile;
+              } else {
+                // Fallback if user document doesn't exist
+                listing.seller = {
+                  userId: listing.userId,
+                  name: listing.userEmail?.split('@')[0] || "Unknown Seller",
+                  avatar: listing.userEmail ? `https://api.dicebear.com/7.x/initials/svg?seed=${listing.userEmail}` : undefined,
+                  university: "Unknown University",
+                  rating: 0,
+                };
+              }
+            } catch (error) {
+              console.error("Error fetching seller profile for listing:", listing.id, error);
+              // Fallback on error
+              listing.seller = {
+                userId: listing.userId,
+                name: listing.userEmail?.split('@')[0] || "Unknown Seller",
+                avatar: listing.userEmail ? `https://api.dicebear.com/7.x/initials/svg?seed=${listing.userEmail}` : undefined,
+                university: "Unknown University",
+                rating: 0,
+              };
+            }
+          } else {
+            // Handle listings without a userId (should ideally not happen)
+            console.warn("Listing without userId found:", listing.id);
+            listing.seller = {
+              userId: "", // Explicitly set to empty string
+              name: listing.userEmail?.split('@')[0] || "Unknown Seller",
+              avatar: listing.userEmail ? `https://api.dicebear.com/7.x/initials/svg?seed=${listing.userEmail}` : undefined,
+              university: "Unknown University",
+              rating: 0,
+            };
+          }
+          listingsData.push(listing);
+        }
+        setListings(listingsData);
+        setLoading(false);
+      }, (error) => {
+        console.error("Error fetching listings: ", error);
+        setLoading(false);
+      });
+    };
+
+    if (filter === "my-listings" && currentUser) {
+      listingsQuery = query(collection(db, "listings"), where("userId", "==", currentUser.uid), orderBy("createdAt", "desc"));
+      fetchListingsAndSellerProfiles(listingsQuery);
+    } else if (filter === "bookmarked-listings" && currentUser) {
+      const bookmarksQuery = query(collection(db, "bookmarks"), where("userId", "==", currentUser.uid));
+      unsubscribe = onSnapshot(bookmarksQuery, async (bookmarkSnapshot) => {
+        const bookmarkedListingIds = bookmarkSnapshot.docs.map(doc => doc.data().listingId);
+        
+        if (bookmarkedListingIds.length > 0) {
+          const fetchedBookmarkedListings: Listing[] = [];
+          for (const listingId of bookmarkedListingIds) {
+            const listingDocRef = doc(db, "listings", listingId);
+            const listingDocSnap = await getDoc(listingDocRef);
+            if (listingDocSnap.exists()) {
+              const listing = { id: listingDocSnap.id, ...listingDocSnap.data() } as Listing;
+              if (listing.userId) {
+                try {
+                  const userDocRef = doc(db, "users", listing.userId);
+                  const userDocSnap = await getDoc(userDocRef);
+                  if (userDocSnap.exists()) {
+                    listing.seller = { userId: listing.userId, ...userDocSnap.data() } as SellerProfile;
+                  } else {
+                    listing.seller = {
+                      userId: listing.userId,
+                      name: listing.userEmail?.split('@')[0] || "Unknown Seller",
+                      avatar: listing.userEmail ? `https://api.dicebear.com/7.x/initials/svg?seed=${listing.userEmail}` : undefined,
+                      university: "Unknown University",
+                      rating: 0,
+                    };
+                  }
+                } catch (error) {
+                  console.error("Error fetching seller profile for bookmarked listing:", listing.id, error);
+                  listing.seller = {
+                    userId: listing.userId,
+                    name: listing.userEmail?.split('@')[0] || "Unknown Seller",
+                    avatar: listing.userEmail ? `https://api.dicebear.com/7.x/initials/svg?seed=${listing.userEmail}` : undefined,
+                    university: "Unknown University",
+                    rating: 0,
+                  };
+                }
+              } else {
+                console.warn("Bookmarked listing without userId found:", listing.id);
+                listing.seller = {
+                  userId: "",
+                  name: listing.userEmail?.split('@')[0] || "Unknown Seller",
+                  avatar: listing.userEmail ? `https://api.dicebear.com/7.x/initials/svg?seed=${listing.userEmail}` : undefined,
+                  university: "Unknown University",
+                  rating: 0,
+                };
+              }
+              fetchedBookmarkedListings.push(listing);
+            }
+          }
+          setListings(fetchedBookmarkedListings);
+        } else {
+          setListings([]);
+        }
+        setLoading(false);
+      }, (error) => {
+        console.error("Error fetching bookmarked listings: ", error);
+        setLoading(false);
+      });
+    } else {
+      listingsQuery = query(collection(db, "listings"), orderBy("createdAt", "desc"));
+      fetchListingsAndSellerProfiles(listingsQuery);
+    }
 
     return () => unsubscribe();
-  }, []);
+  }, [location.search]); // Re-run effect when location.search changes
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -79,13 +204,7 @@ export default function Listings() {
                         description={listing.description}
                         image={listing.imageUrl || "/placeholder.svg"}
                         category={listing.category}
-                        seller={{
-                          name: listing.userEmail.split('@')[0], // Use email prefix as name
-                          avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${listing.userEmail}`, // Placeholder avatar
-                          university: "University Name", // Placeholder
-                          rating: 4.5, // Placeholder
-                          userId: listing.userId, // Pass the userId
-                        }}
+                        seller={listing.seller || { name: "Unknown Seller", userId: "", university: "Unknown", rating: 0 }} // Pass the fetched seller object
                         isService={listing.category === "Services"}
                       />
                     ))
