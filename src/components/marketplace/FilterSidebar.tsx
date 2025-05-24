@@ -8,15 +8,17 @@ import { Slider } from "@/components/ui/slider";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { X } from "lucide-react";
+import { Input } from "@/components/ui/input"; // Import Input component
 
 interface FilterSidebarProps {
   className?: string;
-  onFilterChange: (filters: { category: string; priceRange: [number, number]; condition: string[]; university: string; }) => void;
+  onFilterChange: (filters: { category: string; priceRange: [number, number]; condition: string[]; university: string; sellerName: string; }) => void;
   onResetFilters: () => void;
-  currentFilters: { category: string; priceRange: [number, number]; condition: string[]; university: string; };
+  currentFilters: { category: string; priceRange: [number, number]; condition: string[]; university: string; sellerName: string; };
+  onSellerNameChange: (name: string) => void; // New prop for seller name changes
 }
 
-export function FilterSidebar({ className, onFilterChange, onResetFilters, currentFilters }: FilterSidebarProps) {
+export function FilterSidebar({ className, onFilterChange, onResetFilters, currentFilters, onSellerNameChange }: FilterSidebarProps) {
   const categories = [
     "Textbooks", "Electronics", "Furniture", "Clothing", 
     "Sports Equipment", "Services", "Transportation", "Other"
@@ -37,12 +39,14 @@ export function FilterSidebar({ className, onFilterChange, onResetFilters, curre
   const [priceRange, setPriceRange] = useState(currentFilters.priceRange);
   const [selectedConditions, setSelectedConditions] = useState<string[]>(currentFilters.condition);
   const [university, setUniversity] = useState(currentFilters.university);
+  const [sellerName, setSellerName] = useState(currentFilters.sellerName); // New state for seller name
 
   useEffect(() => {
     setCategory(currentFilters.category);
     setPriceRange(currentFilters.priceRange);
     setSelectedConditions(currentFilters.condition);
     setUniversity(currentFilters.university);
+    setSellerName(currentFilters.sellerName); // Sync sellerName
   }, [currentFilters]);
 
   const handleConditionChange = (id: string, checked: boolean) => {
@@ -57,14 +61,16 @@ export function FilterSidebar({ className, onFilterChange, onResetFilters, curre
       priceRange,
       condition: selectedConditions,
       university,
+      sellerName, // Include sellerName
     });
-  }, [category, priceRange, selectedConditions, university, onFilterChange]);
+  }, [category, priceRange, selectedConditions, university, sellerName, onFilterChange]);
 
   const handleReset = useCallback(() => {
     setCategory("");
     setPriceRange([0, 1000]);
     setSelectedConditions([]);
     setUniversity("");
+    setSellerName(""); // Clear seller name on reset
     onResetFilters();
   }, [onResetFilters]);
 
@@ -73,19 +79,25 @@ export function FilterSidebar({ className, onFilterChange, onResetFilters, curre
     (priceRange[0] > 0 || priceRange[1] < 1000) && { type: "price", value: priceRange, label: `$${priceRange[0]}-$${priceRange[1]}` },
     ...selectedConditions.map(cond => ({ type: "condition", value: cond, label: conditions.find(c => c.id === cond)?.label || cond })),
     university && { type: "university", value: university, label: universities.find(u => u.toLowerCase() === university)?.replace(/\b\w/g, l => l.toUpperCase()) || university },
-  ].filter(Boolean);
+    sellerName && { type: "sellerName", value: sellerName, label: `Seller: ${sellerName}` }, // New active filter for seller name
+  ].filter(Boolean) as { type: string; value: string | number[]; label: string }[]; // Explicitly type activeFilters
 
-  const handleRemoveFilter = (type: string, value: any) => {
+  const handleRemoveFilter = (type: string, value: string | number[]) => {
     if (type === "category") setCategory("");
     if (type === "price") setPriceRange([0, 1000]);
     if (type === "condition") setSelectedConditions((prev) => prev.filter((c) => c !== value));
     if (type === "university") setUniversity("");
+    if (type === "sellerName") {
+      setSellerName(""); // Remove seller name filter
+      onSellerNameChange(""); // Notify parent to clear seller name
+    }
     // Apply filters after removing one
     onFilterChange({
       category: type === "category" ? "" : category,
       priceRange: type === "price" ? [0, 1000] : priceRange,
       condition: type === "condition" ? selectedConditions.filter((c) => c !== value) : selectedConditions,
       university: type === "university" ? "" : university,
+      sellerName: type === "sellerName" ? "" : sellerName, // Update sellerName
     });
   };
 
@@ -106,7 +118,7 @@ export function FilterSidebar({ className, onFilterChange, onResetFilters, curre
             <div>
               <h3 className="font-medium mb-3">Active Filters</h3>
               <div className="flex flex-wrap gap-2">
-                {activeFilters.map((filter: any) => (
+                {activeFilters.map((filter) => ( // Removed 'any' type here
                   <Badge key={`${filter.type}-${filter.value}`} variant="secondary" className="flex items-center gap-1">
                     {filter.label}
                     <X className="h-3 w-3 cursor-pointer" onClick={() => handleRemoveFilter(filter.type, filter.value)} />
@@ -115,6 +127,22 @@ export function FilterSidebar({ className, onFilterChange, onResetFilters, curre
               </div>
             </div>
           )}
+
+          <Separator />
+
+          {/* Seller Name Filter */}
+          <div>
+            <h3 className="font-medium mb-3">Seller Name</h3>
+            <Input
+              type="text"
+              placeholder="Search by seller name..."
+              value={sellerName}
+              onChange={(e) => {
+                setSellerName(e.target.value);
+                onSellerNameChange(e.target.value); // Call the new prop
+              }}
+            />
+          </div>
 
           <Separator />
 

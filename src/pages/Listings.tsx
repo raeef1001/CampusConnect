@@ -10,27 +10,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { getUser } from "@/utils/auth";
 import { FilterSidebar } from "@/components/marketplace/FilterSidebar"; // Import FilterSidebar
 import { Pagination, PaginationContent, PaginationItem, PaginationPrevious, PaginationLink, PaginationNext } from "@/components/ui/pagination"; // Import Pagination components
+import { Listing } from '@/types/listing'; // Import the canonical Listing interface
 
 interface SellerProfile {
+  userId: string;
   name: string;
   avatar?: string;
   university: string;
   rating: number;
-  userId: string; // Add userId to SellerProfile
-}
-
-interface Listing {
-  id: string;
-  title: string;
-  description: string;
-  price: number;
-  category: string;
-  condition: string;
-  imageUrl: string;
-  userId: string;
-  userEmail: string;
-  createdAt: Timestamp;
-  seller?: SellerProfile; // Add optional seller profile
 }
 
 interface FilterState {
@@ -38,6 +25,7 @@ interface FilterState {
   priceRange: [number, number];
   condition: string[];
   university: string;
+  sellerName: string; // Added sellerName to FilterState
 }
 
 export default function Listings() {
@@ -61,8 +49,10 @@ export default function Listings() {
     priceRange: [0, 1000],
     condition: [],
     university: "",
+    sellerName: "", // Initialize sellerName
   });
   const [searchQuery, setSearchQuery] = useState(""); // State for search query from URL
+  const [sellerNameFilter, setSellerNameFilter] = useState(""); // New state for seller name filter
 
   const handleFilterChange = useCallback((newFilters: FilterState) => {
     setFilters((prevFilters) => ({ ...prevFilters, ...newFilters }));
@@ -79,6 +69,7 @@ export default function Listings() {
       priceRange: [0, 1000],
       condition: [],
       university: "",
+      sellerName: "", // Clear sellerName on reset
     });
     setSearchQuery(""); // Clear search query on reset
     setCurrentPage(1); // Reset to first page on filter change
@@ -98,16 +89,8 @@ export default function Listings() {
     const listingsCollectionRef = collection(db, "listings");
     let baseQuery: Query = query(listingsCollectionRef, orderBy("createdAt", "desc"));
 
-    // Apply search query
-    if (searchQuery) {
-      // For full-text search, Firestore requires specific indexing or a third-party solution.
-      // A basic "starts-with" or "contains" query can be done for exact matches or prefixes.
-      // For simplicity, we'll assume a basic prefix search on 'title' for now.
-      // For more advanced search, consider Algolia, ElasticSearch, or a similar service.
-      baseQuery = query(baseQuery, where("title", ">=", searchQuery), where("title", "<=", searchQuery + '\uf8ff'));
-    }
-
     // Apply filters
+    // Note: Search query is handled client-side due to Firestore limitations for 'contains' queries.
     if (filters.category) {
       baseQuery = query(baseQuery, where("category", "==", filters.category));
     }
@@ -122,6 +105,16 @@ export default function Listings() {
       // If it's on seller profile, you'd need to adjust the query or fetch logic.
       // For now, assuming it's on listing for simplicity in query.
       baseQuery = query(baseQuery, where("seller.university", "==", filters.university));
+    }
+    // Apply seller name filter to Firestore query if provided
+    if (sellerNameFilter) {
+      const lowercasedSellerName = sellerNameFilter.toLowerCase();
+      // Firestore range query for "starts with" functionality
+      baseQuery = query(
+        baseQuery,
+        where("seller.name", ">=", lowercasedSellerName),
+        where("seller.name", "<=", lowercasedSellerName + '\uf8ff')
+      );
     }
 
     let unsubscribe: () => void = () => {};
@@ -151,138 +144,153 @@ export default function Listings() {
                   const batchListings: Listing[] = [];
                   for (const docSnapshot of snapshot.docs) {
                     const listing = { id: docSnapshot.id, ...docSnapshot.data() } as Listing;
-                    if (listing.userId) {
-                      try {
-                        const userDocRef = doc(db, "users", listing.userId);
-                        const userDocSnap = await getDoc(userDocRef);
-                        if (userDocSnap.exists()) {
-                          listing.seller = { userId: listing.userId, ...userDocSnap.data() } as SellerProfile;
-                        } else {
-                          listing.seller = {
-                            userId: listing.userId,
-                            name: listing.userEmail?.split('@')[0] || "Unknown Seller",
-                            avatar: listing.userEmail ? `https://api.dicebear.com/7.x/initials/svg?seed=${listing.userEmail}` : undefined,
-                            university: "Unknown University",
-                            rating: 0,
-                          };
-                        }
-                      } catch (error) {
-                        console.error("Error fetching seller profile for bookmarked listing:", listing.id, error);
-                        listing.seller = {
-                          userId: listing.userId,
-                          name: listing.userEmail?.split('@')[0] || "Unknown Seller",
-                          avatar: listing.userEmail ? `https://api.dicebear.com/7.x/initials/svg?seed=${listing.userEmail}` : undefined,
-                          university: "Unknown University",
-                          rating: 0,
-                        };
-                      }
-                    } else {
-                      console.warn("Bookmarked listing without userId found:", listing.id);
-                      listing.seller = {
-                        userId: "",
-                        name: listing.userEmail?.split('@')[0] || "Unknown Seller",
-                        avatar: listing.userEmail ? `https://api.dicebear.com/7.x/initials/svg?seed=${listing.userEmail}` : undefined,
-                        university: "Unknown University",
-                        rating: 0,
-                      };
-                    }
-                    batchListings.push(listing);
-                  }
-                  return batchListings;
-                })
-              );
-            }
-            const allFetchedListings = (await Promise.all(listingBatches)).flat();
-            setListings(allFetchedListings);
-          } else {
-            setListings([]);
-          }
-          setLoading(false);
-        }, (error) => {
-          console.error("Error fetching bookmarked listings: ", error);
-          setLoading(false);
-        });
-        return; // Exit early for bookmarked listings as it has its own onSnapshot
-      }
-
-      // Pagination logic
-      let paginatedQuery: Query;
-      if (currentPage === 1) {
-        paginatedQuery = query(currentListingsQuery, limit(listingsPerPage + 1)); // Fetch one extra to check for next page
-      } else {
-        paginatedQuery = query(currentListingsQuery, startAfter(lastVisible), limit(listingsPerPage + 1));
-      }
-
-      unsubscribe = onSnapshot(paginatedQuery, async (snapshot) => {
-        const fetchedDocs = snapshot.docs;
-        const hasMoreResults = fetchedDocs.length > listingsPerPage;
-        const listingsToDisplay = hasMoreResults ? fetchedDocs.slice(0, listingsPerPage) : fetchedDocs;
-
-        const listingsData: Listing[] = [];
-        for (const docSnapshot of listingsToDisplay) {
-          const listing = { id: docSnapshot.id, ...docSnapshot.data() } as Listing;
-          
-          if (listing.userId) {
+          if (listing.sellerId) {
             try {
-              const userDocRef = doc(db, "users", listing.userId);
+              const userDocRef = doc(db, "users", listing.sellerId);
               const userDocSnap = await getDoc(userDocRef);
               if (userDocSnap.exists()) {
-                listing.seller = { userId: listing.userId, ...userDocSnap.data() } as SellerProfile;
+                listing.seller = { userId: listing.sellerId, ...userDocSnap.data() } as SellerProfile;
               } else {
+                // If user profile doesn't exist, use the provided sellerId with default unknown values
                 listing.seller = {
-                  userId: listing.userId,
-                  name: listing.userEmail?.split('@')[0] || "Unknown Seller",
-                  avatar: listing.userEmail ? `https://api.dicebear.com/7.x/initials/svg?seed=${listing.userEmail}` : undefined,
+                  userId: listing.sellerId, // Use the actual sellerId
+                  name: "Unknown Seller",
+                  avatar: undefined,
                   university: "Unknown University",
                   rating: 0,
                 };
+                console.warn(`Seller profile not found for userId: ${listing.sellerId}`);
               }
             } catch (error) {
-              console.error("Error fetching seller profile for listing:", listing.id, error);
+              console.error("Error fetching seller profile for bookmarked listing:", listing.id, error);
               listing.seller = {
-                userId: listing.userId,
-                name: listing.userEmail?.split('@')[0] || "Unknown Seller",
-                avatar: listing.userEmail ? `https://api.dicebear.com/7.x/initials/svg?seed=${listing.userEmail}` : undefined,
+                userId: listing.sellerId, // Use the actual sellerId
+                name: "Unknown Seller",
+                avatar: undefined,
                 university: "Unknown University",
                 rating: 0,
               };
             }
           } else {
-            console.warn("Listing without userId found:", listing.id);
+            // Fallback for bookmarked listings without sellerId
             listing.seller = {
-              userId: "",
-              name: listing.userEmail?.split('@')[0] || "Unknown Seller",
-              avatar: listing.userEmail ? `https://api.dicebear.com/7.x/initials/svg?seed=${listing.userEmail}` : undefined,
+              userId: "unknown_seller_id", // Use a placeholder ID if sellerId is completely missing
+              name: "Unknown Seller",
+              avatar: undefined,
               university: "Unknown University",
               rating: 0,
             };
           }
-          listingsData.push(listing);
+          batchListings.push(listing);
         }
-        setListings(listingsData);
-        setLoading(false);
+        return batchListings;
+      })
+    );
+  }
+  const allFetchedListings = (await Promise.all(listingBatches)).flat();
+  setListings(allFetchedListings);
+} else {
+  setListings([]);
+}
+setLoading(false);
+}, (error) => {
+  console.error("Error fetching bookmarked listings: ", error);
+  setLoading(false);
+});
+return; // Exit early for bookmarked listings as it has its own onSnapshot
+}
 
-        if (listingsToDisplay.length > 0) {
-          setFirstVisible(listingsToDisplay[0]);
-          setLastVisible(listingsToDisplay[listingsToDisplay.length - 1]);
+// Pagination logic
+let paginatedQuery: Query;
+if (currentPage === 1) {
+  paginatedQuery = query(baseQuery, limit(listingsPerPage + 1)); // Fetch one extra to check for next page
+} else {
+  paginatedQuery = query(baseQuery, startAfter(lastVisible), limit(listingsPerPage + 1));
+}
+
+unsubscribe = onSnapshot(paginatedQuery, async (snapshot) => {
+  const fetchedDocs = snapshot.docs;
+  const hasMoreResults = fetchedDocs.length > listingsPerPage;
+  const listingsToDisplay = hasMoreResults ? fetchedDocs.slice(0, listingsPerPage) : fetchedDocs;
+
+  let listingsData: Listing[] = [];
+  for (const docSnapshot of listingsToDisplay) {
+    const listing = { id: docSnapshot.id, ...docSnapshot.data() } as Listing;
+
+    if (listing.sellerId) { // Use sellerId from listing
+      try {
+        const userDocRef = doc(db, "users", listing.sellerId);
+        const userDocSnap = await getDoc(userDocRef);
+        if (userDocSnap.exists()) {
+          listing.seller = { userId: listing.sellerId, ...userDocSnap.data() } as SellerProfile;
         } else {
-          setFirstVisible(null);
-          setLastVisible(null);
+          // If user profile doesn't exist, use the provided sellerId with default unknown values
+          listing.seller = {
+            userId: listing.sellerId, // Use the actual sellerId
+            name: "Unknown Seller",
+            avatar: undefined,
+            university: "Unknown University",
+            rating: 0,
+          };
+          console.warn(`Seller profile not found for userId: ${listing.sellerId}`);
         }
+      } catch (error) {
+        console.error("Error fetching seller profile for listing:", listing.id, error);
+        listing.seller = {
+          userId: listing.sellerId, // Use the actual sellerId
+          name: "Unknown Seller",
+          avatar: undefined,
+          university: "Unknown University",
+          rating: 0,
+        };
+      }
+    } else {
+      // Fallback for listings without sellerId
+      listing.seller = {
+        userId: "unknown_seller_id", // Use a placeholder ID if sellerId is completely missing
+        name: "Unknown Seller",
+        avatar: undefined,
+        university: "Unknown University",
+        rating: 0,
+      };
+    }
+    listingsData.push(listing);
+  }
 
-        setHasMore(hasMoreResults);
-        setHasPrevious(currentPage > 1);
+  // Client-side filtering for search query (product title/description)
+  if (searchQuery) {
+    const lowercasedSearchQuery = searchQuery.toLowerCase();
+    listingsData = listingsData.filter(listing =>
+      listing.title.toLowerCase().includes(lowercasedSearchQuery) ||
+      listing.description.toLowerCase().includes(lowercasedSearchQuery)
+    );
+  }
 
-      }, (error) => {
-        console.error("Error fetching listings: ", error);
-        setLoading(false);
-      });
-    };
 
-    fetchListings();
+  setListings(listingsData);
+  setLoading(false);
 
-    return () => unsubscribe();
-  }, [location.search, currentPage, filters, searchQuery]); // Re-run effect when location.search, currentPage, filters, or searchQuery change
+  if (listingsToDisplay.length > 0) {
+    setFirstVisible(listingsToDisplay[0]);
+    setLastVisible(listingsToDisplay[listingsToDisplay.length - 1]);
+  } else {
+    setFirstVisible(null);
+    setLastVisible(null);
+  }
+
+  setHasMore(hasMoreResults);
+  setHasPrevious(currentPage > 1);
+
+}, (error) => {
+  console.error("Error fetching listings: ", error);
+  setLoading(false);
+});
+};
+
+fetchListings();
+
+return () => unsubscribe();
+}, [location.search, currentPage, filters, searchQuery, sellerNameFilter]); // Re-run effect when location.search, currentPage, filters, searchQuery, or sellerNameFilter change
 
   const handleNextPage = () => {
     if (hasMore) {
@@ -313,6 +321,7 @@ export default function Listings() {
               onFilterChange={handleFilterChange} 
               onResetFilters={handleResetFilters}
               currentFilters={filters}
+              onSellerNameChange={setSellerNameFilter} // Pass setSellerNameFilter to FilterSidebar
             />
           </aside>
 
@@ -336,7 +345,7 @@ export default function Listings() {
                           key={listing.id}
                           id={listing.id}
                           title={listing.title}
-                          price={`$${typeof listing.price === 'number' ? listing.price.toFixed(2) : 'N/A'}`}
+                          price={`$${parseFloat(listing.price).toFixed(2)}`}
                           condition={listing.condition}
                           description={listing.description}
                           image={listing.imageUrl || "/placeholder.svg"}
