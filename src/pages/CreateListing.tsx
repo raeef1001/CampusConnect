@@ -8,11 +8,15 @@ import { Label } from "@/components/ui/label";
 import { Navbar } from "@/components/layout/Navbar";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { FloatingChat } from "@/components/ui/floating-chat";
+import { PriceAdvisor } from "@/components/ui/price-advisor";
+import { ImageAnalyzer } from "@/components/ui/image-analyzer";
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft } from 'lucide-react';
-import { db, auth } from '@/lib/firebase'; // Import storage
-import { collection, addDoc, serverTimestamp, doc, getDoc } from 'firebase/firestore'; // Import doc and getDoc
+import { ChevronLeft, Sparkles } from 'lucide-react';
+import { db, auth, storage } from '@/lib/firebase';
+import { collection, addDoc, serverTimestamp, doc, getDoc } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useToast } from '@/components/ui/use-toast';
+import { ImageAnalysisResult } from '@/lib/gemini';
 import { v2 as cloudinary } from 'cloudinary';
 
 cloudinary.config({ 
@@ -29,10 +33,38 @@ export default function CreateListing() {
   const [price, setPrice] = useState('');
   const [category, setCategory] = useState('');
   const [condition, setCondition] = useState('');
-  const [imageFile, setImageFile] = useState<File | null>(null); // For file upload
-  const [uploading, setUploading] = useState(false); // Loading state for upload
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [aiAnalyzed, setAiAnalyzed] = useState(false);
 
   const { toast } = useToast();
+
+  const handleImageAnalysisComplete = (result: ImageAnalysisResult) => {
+    setTitle(result.title);
+    setDescription(result.description);
+    setCategory(result.category);
+    setCondition(result.condition);
+    setPrice(result.suggestedPrice.toString());
+    setAiAnalyzed(true);
+
+    toast({
+      title: "AI Analysis Complete!",
+      description: `Form automatically filled with ${result.confidence}% confidence. Review and edit as needed.`,
+    });
+  };
+
+  const handleImageSelected = (file: File) => {
+    setImageFile(file);
+    setAiAnalyzed(false);
+  };
+
+  const handlePriceSuggestion = (suggestedPrice: number) => {
+    setPrice(suggestedPrice.toString());
+    toast({
+      title: "Price Updated",
+      description: `Price set to $${suggestedPrice} based on market analysis.`,
+    });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,7 +79,7 @@ export default function CreateListing() {
       return;
     }
 
-    setUploading(true); // Start uploading state
+    setUploading(true);
     let imageUrl = "";
 
     if (imageFile) {
@@ -77,7 +109,7 @@ export default function CreateListing() {
         return;
       }
     } else {
-      imageUrl = "/placeholder.svg"; // Use placeholder if no image is selected
+      imageUrl = "/placeholder.svg";
     }
 
     // Fetch seller profile
@@ -112,7 +144,7 @@ export default function CreateListing() {
       await addDoc(collection(db, "listings"), {
         title,
         description,
-        price: parseFloat(price), // Convert price to a number
+        price: parseFloat(price),
         category,
         condition,
         imageUrl, // Use the uploaded image URL
@@ -120,13 +152,14 @@ export default function CreateListing() {
         userEmail: user.email, // Keep userEmail at top level
         seller: sellerProfile, // Add the complete seller profile
         createdAt: serverTimestamp(),
+        aiGenerated: aiAnalyzed, // Track if listing was AI-generated
       });
 
       toast({
         title: "Success",
         description: "Listing created successfully!",
       });
-      navigate('/dashboard'); // Redirect to dashboard after creation
+      navigate('/dashboard');
     } catch (error) {
       console.error("Error creating listing: ", error);
       toast({
@@ -135,7 +168,7 @@ export default function CreateListing() {
         variant: "destructive",
       });
     } finally {
-      setUploading(false); // End uploading state
+      setUploading(false);
     }
   };
 
@@ -151,106 +184,187 @@ export default function CreateListing() {
         
         <div className="flex-1 flex flex-col">
           <main className="flex-1 p-6 overflow-auto">
-            <div className="max-w-3xl mx-auto">
+            <div className="max-w-7xl mx-auto">
               <Button variant="ghost" onClick={() => navigate(-1)} className="mb-6 flex items-center gap-2">
                 <ChevronLeft className="h-4 w-4" />
                 Back to Dashboard
               </Button>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-2xl">Create New Listing</CardTitle>
-                  <CardDescription>Fill in the details below to create a new marketplace listing.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <form onSubmit={handleSubmit} className="space-y-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="title">Listing Title</Label>
-                      <Input 
-                        id="title" 
-                        placeholder="e.g., MacBook Pro 2021, Calculus Textbook" 
-                        value={title}
-                        onChange={(e) => setTitle(e.target.value)}
-                        required 
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* AI Image Analyzer - Top Priority */}
+                <div className="lg:col-span-1 order-1 lg:order-2">
+                  <div className="sticky top-6 space-y-6">
+                    <ImageAnalyzer
+                      onAnalysisComplete={handleImageAnalysisComplete}
+                      onImageSelected={handleImageSelected}
+                    />
+                    
+                    {/* Price Advisor - Only show after basic details are filled */}
+                    {(title || category || description) && (
+                      <PriceAdvisor
+                        title={title}
+                        category={category}
+                        condition={condition}
+                        description={description}
+                        onPriceSuggestion={handlePriceSuggestion}
                       />
-                    </div>
+                    )}
+                  </div>
+                </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="description">Description</Label>
-                      <Textarea 
-                        id="description" 
-                        placeholder="Provide a detailed description of your item or service." 
-                        value={description}
-                        onChange={(e) => setDescription(e.target.value)}
-                        rows={5}
-                        required 
-                      />
-                    </div>
+                {/* Main Form */}
+                <div className="lg:col-span-2 order-2 lg:order-1">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-2xl flex items-center gap-2">
+                        Create New Listing
+                        {aiAnalyzed && (
+                          <div className="flex items-center gap-1 text-sm bg-purple-100 text-purple-800 px-2 py-1 rounded-full">
+                            <Sparkles className="h-3 w-3" />
+                            AI Generated
+                          </div>
+                        )}
+                      </CardTitle>
+                      <CardDescription>
+                        {!imageFile 
+                          ? "Start by uploading an image for AI analysis, or fill in the details manually."
+                          : aiAnalyzed 
+                            ? "AI has analyzed your image and filled in the details. Review and edit as needed."
+                            : "Fill in the details below to create a new marketplace listing."
+                        }
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <form onSubmit={handleSubmit} className="space-y-6">
+                        <div className="space-y-2">
+                          <Label htmlFor="title">Listing Title</Label>
+                          <Input 
+                            id="title" 
+                            placeholder="e.g., MacBook Pro 2021, Calculus Textbook" 
+                            value={title}
+                            onChange={(e) => setTitle(e.target.value)}
+                            required 
+                            className={aiAnalyzed ? "border-purple-200 bg-purple-50/30" : ""}
+                          />
+                          {aiAnalyzed && (
+                            <p className="text-xs text-purple-600">✨ AI generated - feel free to edit</p>
+                          )}
+                        </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <Label htmlFor="price">Price ($)</Label>
-                        <Input 
-                          id="price" 
-                          type="number" 
-                          placeholder="e.g., 1200" 
-                          value={price}
-                          onChange={(e) => setPrice(e.target.value)}
-                          required 
-                        />
-                      </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="description">Description</Label>
+                          <Textarea 
+                            id="description" 
+                            placeholder="Provide a detailed description of your item or service." 
+                            value={description}
+                            onChange={(e) => setDescription(e.target.value)}
+                            rows={5}
+                            required 
+                            className={aiAnalyzed ? "border-purple-200 bg-purple-50/30" : ""}
+                          />
+                          {aiAnalyzed && (
+                            <p className="text-xs text-purple-600">✨ AI generated - feel free to edit</p>
+                          )}
+                        </div>
 
-                      <div className="space-y-2">
-                        <Label htmlFor="category">Category</Label>
-                        <Select value={category} onValueChange={setCategory} required>
-                          <SelectTrigger id="category">
-                            <SelectValue placeholder="Select a category" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Electronics">Electronics</SelectItem>
-                            <SelectItem value="Textbooks">Textbooks</SelectItem>
-                            <SelectItem value="Services">Services</SelectItem>
-                            <SelectItem value="Furniture">Furniture</SelectItem>
-                            <SelectItem value="Academic Supplies">Academic Supplies</SelectItem>
-                            <SelectItem value="Other">Other</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div className="space-y-2">
+                            <Label htmlFor="price">Price ($)</Label>
+                            <Input 
+                              id="price" 
+                              type="number" 
+                              placeholder="e.g., 1200" 
+                              value={price}
+                              onChange={(e) => setPrice(e.target.value)}
+                              required 
+                              className={aiAnalyzed ? "border-purple-200 bg-purple-50/30" : ""}
+                            />
+                            {aiAnalyzed && (
+                              <p className="text-xs text-purple-600">✨ AI suggested price</p>
+                            )}
+                          </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="condition">Condition (for physical items)</Label>
-                      <Select value={condition} onValueChange={setCondition}>
-                        <SelectTrigger id="condition">
-                          <SelectValue placeholder="Select condition (optional)" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="New">New</SelectItem>
-                          <SelectItem value="Like New">Like New</SelectItem>
-                          <SelectItem value="Good">Good</SelectItem>
-                          <SelectItem value="Used">Used</SelectItem>
-                          <SelectItem value="Fair">Fair</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="category">Category</Label>
+                            <Select 
+                              value={category} 
+                              onValueChange={setCategory} 
+                              required
+                            >
+                              <SelectTrigger 
+                                id="category"
+                                className={aiAnalyzed ? "border-purple-200 bg-purple-50/30" : ""}
+                              >
+                                <SelectValue placeholder="Select a category" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="Electronics">Electronics</SelectItem>
+                                <SelectItem value="Textbooks">Textbooks</SelectItem>
+                                <SelectItem value="Services">Services</SelectItem>
+                                <SelectItem value="Furniture">Furniture</SelectItem>
+                                <SelectItem value="Academic Supplies">Academic Supplies</SelectItem>
+                                <SelectItem value="Other">Other</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            {aiAnalyzed && (
+                              <p className="text-xs text-purple-600">✨ AI detected category</p>
+                            )}
+                          </div>
+                        </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="image">Listing Image</Label>
-                      <Input 
-                        id="image" 
-                        type="file" 
-                        accept="image/*"
-                        onChange={(e) => setImageFile(e.target.files ? e.target.files[0] : null)}
-                      />
-                      {imageFile && <p className="text-sm text-muted-foreground">Selected: {imageFile.name}</p>}
-                    </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="condition">Condition (for physical items)</Label>
+                          <Select 
+                            value={condition} 
+                            onValueChange={setCondition}
+                          >
+                            <SelectTrigger 
+                              id="condition"
+                              className={aiAnalyzed ? "border-purple-200 bg-purple-50/30" : ""}
+                            >
+                              <SelectValue placeholder="Select condition (optional)" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="New">New</SelectItem>
+                              <SelectItem value="Like New">Like New</SelectItem>
+                              <SelectItem value="Good">Good</SelectItem>
+                              <SelectItem value="Used">Used</SelectItem>
+                              <SelectItem value="Fair">Fair</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          {aiAnalyzed && (
+                            <p className="text-xs text-purple-600">✨ AI assessed condition</p>
+                          )}
+                        </div>
 
-                    <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700" disabled={uploading}>
-                      {uploading ? "Uploading Image..." : "Create Listing"}
-                    </Button>
-                  </form>
-                </CardContent>
-              </Card>
+                        {/* Manual Image Upload (if not using AI analyzer) */}
+                        {!imageFile && (
+                          <div className="space-y-2">
+                            <Label htmlFor="manual-image">Or Upload Image Manually</Label>
+                            <Input 
+                              id="manual-image" 
+                              type="file" 
+                              accept="image/*"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) handleImageSelected(file);
+                              }}
+                            />
+                          </div>
+                        )}
+
+                        <Button 
+                          type="submit" 
+                          className="w-full bg-blue-600 hover:bg-blue-700" 
+                          disabled={uploading}
+                        >
+                          {uploading ? "Creating Listing..." : "Create Listing"}
+                        </Button>
+                      </form>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
             </div>
           </main>
         </div>
