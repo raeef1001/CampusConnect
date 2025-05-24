@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,14 +7,14 @@ import { Slider } from "@/components/ui/slider";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { X } from "lucide-react";
-import { Input } from "@/components/ui/input"; // Import Input component
+import { Input } from "@/components/ui/input";
 
 interface FilterSidebarProps {
   className?: string;
   onFilterChange: (filters: { category: string; priceRange: [number, number]; condition: string[]; university: string; sellerName: string; }) => void;
   onResetFilters: () => void;
   currentFilters: { category: string; priceRange: [number, number]; condition: string[]; university: string; sellerName: string; };
-  onSellerNameChange: (name: string) => void; // New prop for seller name changes
+  onSellerNameChange: (name: string) => void;
 }
 
 export function FilterSidebar({ className, onFilterChange, onResetFilters, currentFilters, onSellerNameChange }: FilterSidebarProps) {
@@ -24,11 +23,12 @@ export function FilterSidebar({ className, onFilterChange, onResetFilters, curre
     "Sports Equipment", "Services", "Transportation", "Other"
   ];
 
+  // Updated conditions to match the normalized values in Listings component
   const conditions = [
-    { id: "new", label: "New" },
-    { id: "like-new", label: "Like New" },
-    { id: "good", label: "Good" },
-    { id: "fair", label: "Fair" },
+    { id: "New", label: "New" },
+    { id: "Like New", label: "Like New" },
+    { id: "Good", label: "Good" },
+    { id: "Fair", label: "Fair" },
   ];
 
   const universities = [
@@ -39,14 +39,14 @@ export function FilterSidebar({ className, onFilterChange, onResetFilters, curre
   const [priceRange, setPriceRange] = useState(currentFilters.priceRange);
   const [selectedConditions, setSelectedConditions] = useState<string[]>(currentFilters.condition);
   const [university, setUniversity] = useState(currentFilters.university);
-  const [sellerName, setSellerName] = useState(currentFilters.sellerName); // New state for seller name
+  const [sellerName, setSellerName] = useState(currentFilters.sellerName);
 
   useEffect(() => {
     setCategory(currentFilters.category);
     setPriceRange(currentFilters.priceRange);
     setSelectedConditions(currentFilters.condition);
     setUniversity(currentFilters.university);
-    setSellerName(currentFilters.sellerName); // Sync sellerName
+    setSellerName(currentFilters.sellerName);
   }, [currentFilters]);
 
   const handleConditionChange = (id: string, checked: boolean) => {
@@ -61,7 +61,7 @@ export function FilterSidebar({ className, onFilterChange, onResetFilters, curre
       priceRange,
       condition: selectedConditions,
       university,
-      sellerName, // Include sellerName
+      sellerName,
     });
   }, [category, priceRange, selectedConditions, university, sellerName, onFilterChange]);
 
@@ -70,35 +70,69 @@ export function FilterSidebar({ className, onFilterChange, onResetFilters, curre
     setPriceRange([0, 1000]);
     setSelectedConditions([]);
     setUniversity("");
-    setSellerName(""); // Clear seller name on reset
+    setSellerName("");
     onResetFilters();
   }, [onResetFilters]);
 
+  // Helper function to format category display name
+  const formatCategoryLabel = (categoryValue: string): string => {
+    return categories.find(c => c.toLowerCase() === categoryValue.toLowerCase()) || categoryValue;
+  };
+
+  // Helper function to format university display name
+  const formatUniversityLabel = (universityValue: string): string => {
+    return universities.find(u => u.toLowerCase() === universityValue.toLowerCase()) || universityValue;
+  };
+
   const activeFilters = [
-    category && { type: "category", value: category, label: categories.find(c => c.toLowerCase() === category)?.replace(/\b\w/g, l => l.toUpperCase()) || category },
-    (priceRange[0] > 0 || priceRange[1] < 1000) && { type: "price", value: priceRange, label: `$${priceRange[0]}-$${priceRange[1]}` },
-    ...selectedConditions.map(cond => ({ type: "condition", value: cond, label: conditions.find(c => c.id === cond)?.label || cond })),
-    university && { type: "university", value: university, label: universities.find(u => u.toLowerCase() === university)?.replace(/\b\w/g, l => l.toUpperCase()) || university },
-    sellerName && { type: "sellerName", value: sellerName, label: `Seller: ${sellerName}` }, // New active filter for seller name
-  ].filter(Boolean) as { type: string; value: string | number[]; label: string }[]; // Explicitly type activeFilters
+    category && { 
+      type: "category", 
+      value: category, 
+      label: formatCategoryLabel(category)
+    },
+    (priceRange[0] > 0 || priceRange[1] < 1000) && { 
+      type: "price", 
+      value: priceRange, 
+      label: `$${priceRange[0]}-$${priceRange[1]}${priceRange[1] === 1000 ? '+' : ''}` 
+    },
+    ...selectedConditions.map(cond => ({ 
+      type: "condition", 
+      value: cond, 
+      label: conditions.find(c => c.id === cond)?.label || cond 
+    })),
+    university && { 
+      type: "university", 
+      value: university, 
+      label: formatUniversityLabel(university)
+    },
+    sellerName && { 
+      type: "sellerName", 
+      value: sellerName, 
+      label: `Seller: ${sellerName}` 
+    },
+  ].filter(Boolean) as { type: string; value: string | number[]; label: string }[];
 
   const handleRemoveFilter = (type: string, value: string | number[]) => {
+    let updatedFilters = {
+      category: type === "category" ? "" : category,
+      priceRange: type === "price" ? [0, 1000] as [number, number] : priceRange,
+      condition: type === "condition" ? selectedConditions.filter((c) => c !== value) : selectedConditions,
+      university: type === "university" ? "" : university,
+      sellerName: type === "sellerName" ? "" : sellerName,
+    };
+
+    // Update local state
     if (type === "category") setCategory("");
     if (type === "price") setPriceRange([0, 1000]);
     if (type === "condition") setSelectedConditions((prev) => prev.filter((c) => c !== value));
     if (type === "university") setUniversity("");
     if (type === "sellerName") {
-      setSellerName(""); // Remove seller name filter
-      onSellerNameChange(""); // Notify parent to clear seller name
+      setSellerName("");
+      onSellerNameChange("");
     }
-    // Apply filters after removing one
-    onFilterChange({
-      category: type === "category" ? "" : category,
-      priceRange: type === "price" ? [0, 1000] : priceRange,
-      condition: type === "condition" ? selectedConditions.filter((c) => c !== value) : selectedConditions,
-      university: type === "university" ? "" : university,
-      sellerName: type === "sellerName" ? "" : sellerName, // Update sellerName
-    });
+
+    // Apply filters immediately
+    onFilterChange(updatedFilters);
   };
 
   return (
@@ -118,10 +152,13 @@ export function FilterSidebar({ className, onFilterChange, onResetFilters, curre
             <div>
               <h3 className="font-medium mb-3">Active Filters</h3>
               <div className="flex flex-wrap gap-2">
-                {activeFilters.map((filter) => ( // Removed 'any' type here
-                  <Badge key={`${filter.type}-${filter.value}`} variant="secondary" className="flex items-center gap-1">
+                {activeFilters.map((filter, index) => (
+                  <Badge key={`${filter.type}-${index}`} variant="secondary" className="flex items-center gap-1">
                     {filter.label}
-                    <X className="h-3 w-3 cursor-pointer" onClick={() => handleRemoveFilter(filter.type, filter.value)} />
+                    <X 
+                      className="h-3 w-3 cursor-pointer hover:text-red-500" 
+                      onClick={() => handleRemoveFilter(filter.type, filter.value)} 
+                    />
                   </Badge>
                 ))}
               </div>
@@ -139,7 +176,7 @@ export function FilterSidebar({ className, onFilterChange, onResetFilters, curre
               value={sellerName}
               onChange={(e) => {
                 setSellerName(e.target.value);
-                onSellerNameChange(e.target.value); // Call the new prop
+                onSellerNameChange(e.target.value);
               }}
             />
           </div>
@@ -178,7 +215,7 @@ export function FilterSidebar({ className, onFilterChange, onResetFilters, curre
               />
               <div className="flex items-center justify-between text-sm text-gray-600">
                 <span>${priceRange[0]}</span>
-                <span>${priceRange[1]}+</span>
+                <span>${priceRange[1]}{priceRange[1] === 1000 ? '+' : ''}</span>
               </div>
             </div>
           </div>
@@ -196,7 +233,7 @@ export function FilterSidebar({ className, onFilterChange, onResetFilters, curre
                   />
                   <label
                     htmlFor={cond.id}
-                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
                   >
                     {cond.label}
                   </label>
