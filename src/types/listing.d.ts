@@ -5,6 +5,7 @@ export interface Listing {
   description: string;
   price: string; // Changed from number to string
   image: string;
+  imageUrl: string; // Add imageUrl property for database compatibility
   sellerId: string;
   category: string;
   condition: string;
