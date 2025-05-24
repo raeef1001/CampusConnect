@@ -370,7 +370,7 @@ export default function Listings() {
         </div>
       </div>
       
-      <FloatingChat />
+      <FloatingChat listings={listings} />
     </div>
   );
 }
