@@ -69,16 +69,16 @@ export function Sidebar({ className, isCollapsed = false, onToggle }: SidebarPro
         {!collapsed && (
           <div className="flex items-center space-x-2">
             <div className="w-8 h-8 bg-primary-warm rounded-lg flex items-center justify-center">
-              <span className="text-primary-warm-foreground font-bold text-sm">CC</span>
-            </div>
-            <span className="font-semibold text-sidebar-foreground">CampusConnect</span>
+            <span className="text-black font-bold text-sm">CC</span>
+          </div>
+          <span className="font-semibold text-black">CampusConnect</span>
           </div>
         )}
         <Button
           variant="ghost"
           size="icon"
           onClick={handleToggle}
-          className="h-8 w-8 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+          className="h-8 w-8 text-black hover:bg-sidebar-accent hover:text-black"
         >
           {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
         </Button>
@@ -92,7 +92,7 @@ export function Sidebar({ className, isCollapsed = false, onToggle }: SidebarPro
                 key={item.href}
                 variant={location.pathname === item.href ? "sidebar-primary" : "ghost"}
                 className={cn(
-                  "w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                  "w-full justify-start text-black hover:bg-sidebar-accent hover:text-black",
                   collapsed && "px-2"
                 )}
                 asChild
@@ -116,7 +116,7 @@ export function Sidebar({ className, isCollapsed = false, onToggle }: SidebarPro
 
           {!collapsed && (
             <div className="pt-4">
-              <p className="px-3 text-xs font-medium text-sidebar-foreground uppercase tracking-wider">
+              <p className="px-3 text-xs font-medium text-black uppercase tracking-wider">
                 Admin
               </p>
               <div className="space-y-1 mt-2">
@@ -124,7 +124,7 @@ export function Sidebar({ className, isCollapsed = false, onToggle }: SidebarPro
                   <Button
                     key={item.href}
                     variant="ghost"
-                    className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                    className="w-full justify-start text-black hover:bg-sidebar-accent hover:text-black"
                     asChild
                   >
                     <Link to={item.href}> {/* Use Link component */}
@@ -150,8 +150,8 @@ export function Sidebar({ className, isCollapsed = false, onToggle }: SidebarPro
           </Avatar>
           {!collapsed && (
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate text-sidebar-foreground">John Doe</p>
-              <p className="text-xs text-sidebar-foreground truncate">Computer Science</p>
+              <p className="text-sm font-medium truncate text-black">John Doe</p>
+              <p className="text-xs text-black truncate">Computer Science</p>
             </div>
           )}
         </div>
