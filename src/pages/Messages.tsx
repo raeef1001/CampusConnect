@@ -78,6 +78,7 @@ export default function Messages() {
   const [fetchedListings, setFetchedListings] = useState<{ [key: string]: Listing }>({});
   const [isListingSelectorOpen, setIsListingSelectorOpen] = useState(false);
   const [shouldSendMessage, setShouldSendMessage] = useState(false);
+  const [initialMessageSent, setInitialMessageSent] = useState(false);
 
   const { toast } = useToast();
 
@@ -252,35 +253,8 @@ export default function Messages() {
 
           if (chatId) {
             chatToSelect = fetchedChats.find(c => c.id === chatId) || null;
-          } else if (sellerId && initialListingId && user.uid !== sellerId) {
-            // Fetch the listing details if initialListingId is present
-            if (initialListingId) {
-              try {
-                const listingDocRef = doc(db, "listings", initialListingId);
-                const listingDocSnap = await getDoc(listingDocRef);
-                if (listingDocSnap.exists()) {
-                  const listingData = listingDocSnap.data();
-                  // Construct a minimal Listing object for selectedListing state
-                  setSelectedListing({
-                    id: listingDocSnap.id,
-                    title: listingData.title,
-                    description: listingData.description,
-                    price: String(listingData.price),
-                    imageUrl: listingData.imageUrl,
-                    sellerId: listingData.sellerId || listingData.userId,
-                    category: listingData.category,
-                    condition: listingData.condition,
-                    location: listingData.location,
-                    createdAt: listingData.createdAt,
-                    updatedAt: listingData.updatedAt,
-                    seller: listingData.seller // Assuming seller object is directly available or can be fetched
-                  } as Listing);
-                }
-              } catch (error) {
-                console.error("Error fetching initial listing for chat:", error);
-              }
-            }
-
+          } else if (sellerId && user.uid !== sellerId) {
+            // Handle service provider contact (no listingId needed)
             const existingChat = fetchedChats.find(c =>
               c.participants.includes(sellerId) && c.participants.includes(user.uid)
             );
@@ -292,14 +266,14 @@ export default function Messages() {
                 participants: [user.uid, sellerId],
                 createdAt: serverTimestamp(),
                 updatedAt: serverTimestamp(),
-                listingId: initialListingId,
+                ...(initialListingId && { listingId: initialListingId }),
               });
               const newChatData = {
                 id: newChatRef.id,
                 participants: [user.uid, sellerId],
                 createdAt: serverTimestamp(), 
                 updatedAt: serverTimestamp(), 
-                listingId: initialListingId,
+                ...(initialListingId && { listingId: initialListingId }),
               };
               chatToSelect = newChatData as Chat;
               setChats(prev => {
@@ -338,16 +312,18 @@ export default function Messages() {
     return () => unsubscribeAuth();
   }, [location.state, chatId]);
 
-  // Modified useEffect to trigger message sending
+  // Modified useEffect to trigger message sending only once
   useEffect(() => {
-    if (selectedChat && currentUser && initialMessageRef.current) {
+    if (selectedChat && currentUser && initialMessageRef.current && shouldSendMessage && !initialMessageSent) {
       // Ensure newMessage is still the initial message before sending
       if (newMessage === initialMessageRef.current) {
         handleSendMessage();
+        setInitialMessageSent(true); // Mark as sent
+        setShouldSendMessage(false); // Prevent further automatic sending
       }
       initialMessageRef.current = null; // Clear the ref after sending
     }
-  }, [selectedChat, currentUser, newMessage]);
+  }, [selectedChat, currentUser, shouldSendMessage, initialMessageSent, newMessage]);
 
   useEffect(() => {
     if (selectedChat) {
@@ -726,106 +702,158 @@ export default function Messages() {
                           return (
                             <div
                               key={message.id}
-                              className={cn("flex", message.senderId === currentUser.uid ? "justify-end" : "justify-start")}
+                              className={cn(
+                                "flex",
+                                message.senderId === currentUser.uid ? "justify-end" : "justify-start"
+                              )}
                             >
-                              <div className={cn(
-                                "max-w-[80%] md:max-w-[70%] p-3 rounded-lg shadow-sm",
-                                message.senderId === currentUser.uid
-                                  ? "bg-primary text-primary-foreground rounded-br-none"
-                                  : "bg-card border rounded-bl-none"
-                              )}>
-                                {displayText && <p className="whitespace-pre-wrap break-words text-sm md:text-base">{displayText}</p>}
+                              <div
+                                className={cn(
+                                  "max-w-[70%] rounded-lg p-3 space-y-2",
+                                  message.senderId === currentUser.uid
+                                    ? "bg-primary text-primary-foreground"
+                                    : "bg-muted"
+                                )}
+                              >
+                                {displayText && (
+                                  <p className="text-sm break-words">{displayText}</p>
+                                )}
                                 {displayImage && (
-                                  <img src={displayImage} alt="Shared content" className="max-w-full h-auto rounded-md mt-2 cursor-pointer object-contain max-h-64" onClick={() => window.open(displayImage, '_blank')} />
+                                  <img
+                                    src={displayImage}
+                                    alt="Shared image"
+                                    className="max-w-full h-auto rounded-md"
+                                  />
                                 )}
                                 {message.listingId && fetchedListings[message.listingId] && (
-                                  <div className="mt-2 p-2 bg-background rounded-md border">
-                                    <p className="font-semibold mb-1 text-xs md:text-sm">Shared Product:</p>
-                                    <Link 
-                                      to={`/product/${message.listingId}`}
-                                      className="block hover:bg-muted/30 p-1 rounded-md transition-colors -m-1"
-                                      aria-label={`View details for ${fetchedListings[message.listingId].title}`}
-                                    >
-                                      <ListingCard {...fetchedListings[message.listingId]} />
-                                    </Link>
+                                  <div className="border rounded-lg p-3 bg-background/50">
+                                    <ListingCard
+                                      id={fetchedListings[message.listingId].id}
+                                      title={fetchedListings[message.listingId].title}
+                                      price={fetchedListings[message.listingId].price}
+                                      condition={fetchedListings[message.listingId].condition}
+                                      description={fetchedListings[message.listingId].description}
+                                      image={fetchedListings[message.listingId].image}
+                                      seller={fetchedListings[message.listingId].seller}
+                                      category={fetchedListings[message.listingId].category}
+                                      listingUserId={fetchedListings[message.listingId].sellerId}
+                                    />
                                   </div>
                                 )}
-                                <span className="block text-xs text-right mt-1 opacity-70">
-                                  {message.createdAt && (message.createdAt as Timestamp).seconds 
-                                    ? new Date((message.createdAt as Timestamp).seconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
+                                <p className="text-xs opacity-70">
+                                  {message.createdAt && typeof message.createdAt === 'object' && 'toDate' in message.createdAt
+                                    ? message.createdAt.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                                     : 'Sending...'}
-                                </span>
+                                </p>
                               </div>
                             </div>
                           );
                         })
                       ) : (
-                        <div className="text-center text-muted-foreground h-full flex flex-col justify-center items-center">
-                          <MessageSquare className="h-12 w-12 text-border mb-3"/>
-                          <p>No messages in this conversation yet.</p>
-                          <p className="text-sm">Say hello!</p>
+                        <div className="flex-1 flex items-center justify-center text-muted-foreground">
+                          <div className="text-center">
+                            <MessageSquare className="h-12 w-12 mx-auto mb-3 text-border" />
+                            <p>No messages yet.</p>
+                            <p className="text-sm">Start the conversation!</p>
+                          </div>
                         </div>
                       )}
                       <div ref={messagesEndRef} />
                     </div>
-                    <div className="p-2 md:p-4 border-t bg-card flex items-center space-x-2">
-                      <input type="file" ref={fileInputRef} onChange={handleImageSelect} className="hidden" accept="image/*" />
-                      <Button variant="outline" size="icon" onClick={() => fileInputRef.current?.click()} className="shrink-0" title="Send Image">
-                        <ImageIcon className="h-5 w-5" />
-                      </Button>
-                      <Button variant="outline" size="icon" onClick={() => setIsListingSelectorOpen(true)} className="shrink-0" title="Share Listing">
-                        <ShoppingCart className="h-5 w-5" />
-                      </Button>
-                      
+                    
+                    {/* Message Input Area */}
+                    <div className="p-4 border-t bg-background">
                       {selectedImage && (
-                        <div className="flex items-center space-x-1 p-1.5 border rounded-md text-xs bg-muted">
-                          <ImageIcon className="h-4 w-4 text-muted-foreground" />
-                          <span className="truncate max-w-[80px] md:max-w-[100px]">{selectedImage.name}</span>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-5 w-5 text-muted-foreground hover:text-foreground"
-                            onClick={() => {setSelectedImage(null); if(fileInputRef.current) fileInputRef.current.value = "";}}
-                            aria-label="Remove selected image"
+                        <div className="mb-3 flex items-center gap-2 p-2 bg-muted rounded-lg">
+                          <ImageIcon className="h-4 w-4" />
+                          <span className="text-sm flex-1">{selectedImage.name}</span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedImage(null);
+                              if (fileInputRef.current) fileInputRef.current.value = "";
+                            }}
                           >
-                            <X className="h-3 w-3" />
+                            <X className="h-4 w-4" />
                           </Button>
                         </div>
                       )}
+                      
                       {selectedListing && (
-                        <div className="flex items-center space-x-1 p-1.5 border rounded-md text-xs bg-muted">
-                           <ShoppingCart className="h-4 w-4 text-muted-foreground"/>
-                          <span className="truncate max-w-[80px] md:max-w-[120px]">Sharing: {selectedListing.title}</span>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-5 w-5 text-muted-foreground hover:text-foreground"
-                            onClick={() => setSelectedListing(null)}
-                            aria-label="Remove selected listing"
-                          >
-                            <X className="h-3 w-3" />
-                          </Button>
+                        <div className="mb-3 p-3 bg-muted rounded-lg">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-sm font-medium">Sharing listing:</span>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setSelectedListing(null)}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {selectedListing.title} - ${selectedListing.price}
+                          </div>
                         </div>
                       )}
-
-                      <Input
-                        placeholder="Type your message..."
-                        value={newMessage}
-                        onChange={(e) => setNewMessage(e.target.value)}
-                        onKeyPress={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSendMessage(); }}}
-                        className="flex-1 text-sm md:text-base"
-                        disabled={!selectedChat || !currentUser}
-                      />
-                      <Button onClick={handleSendMessage} disabled={!selectedChat || !currentUser || (newMessage.trim() === "" && !selectedImage && !selectedListing)}>
-                        <Send className="h-5 w-5" />
-                      </Button>
+                      
+                      <div className="flex items-end gap-2">
+                        <div className="flex-1">
+                          <Input
+                            value={newMessage}
+                            onChange={(e) => setNewMessage(e.target.value)}
+                            placeholder="Type a message..."
+                            onKeyPress={(e) => {
+                              if (e.key === "Enter" && !e.shiftKey) {
+                                e.preventDefault();
+                                handleSendMessage();
+                              }
+                            }}
+                            className="resize-none"
+                          />
+                        </div>
+                        
+                        <div className="flex gap-1">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleImageSelect}
+                            ref={fileInputRef}
+                            className="hidden"
+                          />
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => fileInputRef.current?.click()}
+                            disabled={!!selectedListing}
+                          >
+                            <ImageIcon className="h-4 w-4" />
+                          </Button>
+                          
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => setIsListingSelectorOpen(true)}
+                            disabled={!!selectedImage}
+                          >
+                            <ShoppingCart className="h-4 w-4" />
+                          </Button>
+                          
+                          <Button onClick={handleSendMessage} size="icon">
+                            <Send className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
                     </div>
                   </>
                 ) : (
-                  <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground p-8 text-center">
-                    <MessageSquare className="h-16 w-16 text-border mb-4" />
-                    <p className="text-lg">Select a conversation to start chatting.</p>
-                    <p className="text-sm">Or, find a product and contact the seller!</p>
+                  <div className="flex-1 flex items-center justify-center text-muted-foreground">
+                    <div className="text-center">
+                      <MessageSquare className="h-16 w-16 mx-auto mb-4 text-border" />
+                      <h3 className="text-lg font-medium mb-2">Select a conversation</h3>
+                      <p className="text-sm">Choose a conversation from the sidebar to start messaging.</p>
+                    </div>
                   </div>
                 )}
               </div>
@@ -835,12 +863,13 @@ export default function Messages() {
       </div>
       
       <FloatingChat />
-
-      {currentUser && (
+      
+      {/* Listing Selector Dialog */}
+      {isListingSelectorOpen && currentUser && (
         <ListingSelector
           isOpen={isListingSelectorOpen}
-          onClose={() => setIsListingSelectorOpen(false)}
           onSelectListing={handleShareListing}
+          onClose={() => setIsListingSelectorOpen(false)}
           currentUserId={currentUser.uid}
         />
       )}

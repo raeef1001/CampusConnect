@@ -16,7 +16,8 @@ import {
   DollarSign, // Added DollarSign import for bidding
   TrendingUp, // Added TrendingUp import for received bids
   ShoppingBag, // Added ShoppingBag import for incoming orders
-  ShoppingCart // Added ShoppingCart import for outgoing orders
+  ShoppingCart, // Added ShoppingCart import for outgoing orders
+  Briefcase // Added Briefcase import for services
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton"; // Added Skeleton import
@@ -46,6 +47,7 @@ const menuItems = (unreadNotificationsCount: number, unreadMessagesCount: number
   { icon: Package, label: "All Listings", href: "/listings" },
   { icon: Package, label: "My Listings", href: "/listings?filter=my-listings" },
   { icon: Bookmark, label: "Bookmarked Products", href: "/listings?filter=bookmarked-listings" },
+  { icon: Briefcase, label: "Services", href: "/services" },
   { icon: DollarSign, label: "My Bids", href: "/bids/my-bids" },
   { icon: TrendingUp, label: "Received Bids", href: "/bids/received" },
   { icon: ShoppingCart, label: "My Orders", href: "/orders/outgoing" },

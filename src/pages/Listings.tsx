@@ -11,6 +11,7 @@ import { getUser } from "@/utils/auth";
 import { FilterSidebar } from "@/components/marketplace/FilterSidebar";
 import { Pagination, PaginationContent, PaginationItem, PaginationPrevious, PaginationLink, PaginationNext } from "@/components/ui/pagination";
 import { Listing } from '@/types/listing';
+import { useOptimizedListings, useOptimizedUserListings, usePrefetchData } from "@/hooks/useOptimizedData";
 
 interface SellerProfile {
   userId: string;

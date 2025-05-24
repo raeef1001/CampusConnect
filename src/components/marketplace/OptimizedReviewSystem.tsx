@@ -1,33 +1,17 @@
-import { useState, useEffect, useCallback } from "react";
-import { collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, doc, getDoc, updateDoc, increment, limit, startAfter, getDocs } from "firebase/firestore";
+import { useState } from "react";
+import { doc, getDoc, updateDoc, increment, addDoc, serverTimestamp, collection } from "firebase/firestore";
 import { db, auth } from "@/lib/firebase";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Star, MessageSquare, ThumbsUp, Flag, ChevronDown } from "lucide-react";
+import { Star, MessageSquare, ThumbsUp, Flag } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
 import { ReportUser } from "./ReportUser";
 import { useOptimizedReviews, useOptimizedReviewSummary, useCreateReview } from "@/hooks/useOptimizedData";
-
-interface Review {
-  id: string;
-  reviewerId: string;
-  reviewerName: string;
-  reviewerAvatar?: string;
-  sellerId: string;
-  listingId?: string;
-  listingTitle?: string;
-  rating: number;
-  comment: string;
-  createdAt: any;
-  helpful: number;
-  verified: boolean;
-}
 
 interface ReviewSystemProps {
   sellerId: string;
@@ -37,136 +21,24 @@ interface ReviewSystemProps {
   showAddReview?: boolean;
 }
 
-const REVIEWS_PER_PAGE = 10;
-
-export function ReviewSystem({ 
+export function OptimizedReviewSystem({ 
   sellerId, 
   sellerName, 
   currentListingId, 
   currentListingTitle,
   showAddReview = true 
 }: ReviewSystemProps) {
-  const [reviews, setReviews] = useState<Review[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
   const [showReviewDialog, setShowReviewDialog] = useState(false);
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [averageRating, setAverageRating] = useState(0);
-  const [totalReviews, setTotalReviews] = useState(0);
-  const [hasMore, setHasMore] = useState(true);
-  const [lastDoc, setLastDoc] = useState<any>(null);
-  const [ratingDistribution, setRatingDistribution] = useState<{[key: number]: number}>({});
   const { toast } = useToast();
 
-  // Combined fetch function to get both summary and reviews
-  const fetchReviewsAndSummary = useCallback(async (isLoadMore = false) => {
-    if (isLoadMore) {
-      setLoadingMore(true);
-    } else {
-      setLoading(true);
-    }
+  // Use optimized hooks for data fetching
+  const { data: reviews = [], isLoading: reviewsLoading, error: reviewsError } = useOptimizedReviews(sellerId);
+  const { data: reviewSummary, isLoading: summaryLoading } = useOptimizedReviewSummary(sellerId);
+  const createReviewMutation = useCreateReview();
 
-    try {
-      console.log("Fetching reviews for sellerId:", sellerId);
-
-      // First, get all reviews for summary calculation
-      const allReviewsQuery = query(
-        collection(db, "reviews"),
-        where("sellerId", "==", sellerId)
-      );
-      
-      const allReviewsSnapshot = await getDocs(allReviewsQuery);
-      const allReviewsData: Review[] = [];
-      
-      allReviewsSnapshot.forEach((doc) => {
-        const data = doc.data();
-        console.log("Review data:", data);
-        allReviewsData.push({ id: doc.id, ...data } as Review);
-      });
-
-      console.log("Total reviews found:", allReviewsData.length);
-
-      // Update summary data
-      setTotalReviews(allReviewsData.length);
-      
-      if (allReviewsData.length > 0) {
-        const avgRating = allReviewsData.reduce((sum, review) => sum + review.rating, 0) / allReviewsData.length;
-        setAverageRating(Math.round(avgRating * 10) / 10);
-        
-        // Calculate rating distribution
-        const distribution: {[key: number]: number} = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
-        allReviewsData.forEach(review => {
-          distribution[review.rating] = (distribution[review.rating] || 0) + 1;
-        });
-        setRatingDistribution(distribution);
-      } else {
-        setAverageRating(0);
-        setRatingDistribution({ 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 });
-      }
-
-      // Now get paginated reviews for display
-      let reviewsQuery = query(
-        collection(db, "reviews"),
-        where("sellerId", "==", sellerId),
-        orderBy("createdAt", "desc"),
-        limit(REVIEWS_PER_PAGE)
-      );
-
-      if (isLoadMore && lastDoc) {
-        reviewsQuery = query(
-          collection(db, "reviews"),
-          where("sellerId", "==", sellerId),
-          orderBy("createdAt", "desc"),
-          startAfter(lastDoc),
-          limit(REVIEWS_PER_PAGE)
-        );
-      }
-
-      const paginatedSnapshot = await getDocs(reviewsQuery);
-      const newReviews: Review[] = [];
-      
-      paginatedSnapshot.forEach((doc) => {
-        const data = doc.data();
-        newReviews.push({ id: doc.id, ...data } as Review);
-      });
-
-      console.log("Paginated reviews found:", newReviews.length);
-
-      if (isLoadMore) {
-        setReviews(prev => [...prev, ...newReviews]);
-      } else {
-        setReviews(newReviews);
-      }
-
-      // Update pagination state
-      if (paginatedSnapshot.docs.length > 0) {
-        setLastDoc(paginatedSnapshot.docs[paginatedSnapshot.docs.length - 1]);
-      }
-      
-      setHasMore(paginatedSnapshot.docs.length === REVIEWS_PER_PAGE);
-      
-    } catch (error) {
-      console.error("Error fetching reviews:", error);
-    } finally {
-      setLoading(false);
-      setLoadingMore(false);
-    }
-  }, [sellerId, lastDoc]);
-
-  useEffect(() => {
-    if (sellerId) {
-      console.log("useEffect triggered for sellerId:", sellerId);
-      fetchReviewsAndSummary();
-    }
-  }, [sellerId, fetchReviewsAndSummary]);
-
-  const handleLoadMore = () => {
-    if (!loadingMore && hasMore) {
-      fetchReviewsAndSummary(true);
-    }
-  };
+  const { averageRating = 0, totalReviews = 0, ratingDistribution = {} } = reviewSummary || {};
 
   const handleSubmitReview = async () => {
     const user = auth.currentUser;
@@ -206,14 +78,12 @@ export function ReviewSystem({
       return;
     }
 
-    setSubmitting(true);
-
     try {
       // Get reviewer info
       const userDoc = await getDoc(doc(db, "users", user.uid));
       const userData = userDoc.data();
 
-      // Add review
+      // Prepare review data
       const reviewData = {
         reviewerId: user.uid,
         reviewerName: userData?.name || user.displayName || user.email?.split('@')[0] || "Anonymous",
@@ -223,13 +93,12 @@ export function ReviewSystem({
         listingTitle: currentListingTitle || null,
         rating: rating,
         comment: comment.trim(),
-        createdAt: serverTimestamp(),
         helpful: 0,
         verified: true,
       };
 
-      console.log("Submitting review:", reviewData);
-      await addDoc(collection(db, "reviews"), reviewData);
+      // Use the mutation to create the review
+      await createReviewMutation.mutateAsync(reviewData);
 
       // Update seller's rating in users collection
       const sellerRef = doc(db, "users", sellerId);
@@ -252,18 +121,10 @@ export function ReviewSystem({
         relatedId: currentListingId,
       });
 
-      toast({
-        title: "Review Submitted",
-        description: "Thank you for your feedback!",
-      });
-
       setShowReviewDialog(false);
       setRating(0);
       setComment("");
       
-      // Refresh data
-      setLastDoc(null); // Reset pagination
-      fetchReviewsAndSummary();
     } catch (error) {
       console.error("Error submitting review:", error);
       toast({
@@ -271,8 +132,6 @@ export function ReviewSystem({
         description: "Failed to submit review. Please try again.",
         variant: "destructive",
       });
-    } finally {
-      setSubmitting(false);
     }
   };
 
@@ -313,15 +172,7 @@ export function ReviewSystem({
     return !existingReview;
   };
 
-  // Debug info
-  console.log("ReviewSystem render:", {
-    sellerId,
-    totalReviews,
-    averageRating,
-    reviewsLength: reviews.length,
-    loading,
-    ratingDistribution
-  });
+  const loading = reviewsLoading || summaryLoading;
 
   return (
     <div className="space-y-6">
@@ -373,9 +224,9 @@ export function ReviewSystem({
                       </Button>
                       <Button
                         onClick={handleSubmitReview}
-                        disabled={submitting || rating === 0}
+                        disabled={createReviewMutation.isPending || rating === 0}
                       >
-                        {submitting ? "Submitting..." : "Submit Review"}
+                        {createReviewMutation.isPending ? "Submitting..." : "Submit Review"}
                       </Button>
                     </div>
                   </div>
@@ -385,38 +236,44 @@ export function ReviewSystem({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center space-x-4">
-            <div className="text-center">
-              <div className="text-3xl font-bold text-yellow-600">
-                {averageRating.toFixed(1)}
-              </div>
-              <div className="flex justify-center mb-1">
-                {renderStars(Math.round(averageRating))}
-              </div>
-              <div className="text-sm text-gray-500">
-                {totalReviews} review{totalReviews !== 1 ? 's' : ''}
-              </div>
+          {loading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
             </div>
-            <div className="flex-1">
-              {[5, 4, 3, 2, 1].map((star) => {
-                const count = ratingDistribution[star] || 0;
-                const percentage = totalReviews > 0 ? (count / totalReviews) * 100 : 0;
-                return (
-                  <div key={star} className="flex items-center space-x-2 text-sm">
-                    <span className="w-3">{star}</span>
-                    <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                    <div className="flex-1 bg-gray-200 rounded-full h-2">
-                      <div
-                        className="bg-yellow-400 h-2 rounded-full transition-all duration-300"
-                        style={{ width: `${percentage}%` }}
-                      />
+          ) : (
+            <div className="flex items-center space-x-4">
+              <div className="text-center">
+                <div className="text-3xl font-bold text-yellow-600">
+                  {averageRating.toFixed(1)}
+                </div>
+                <div className="flex justify-center mb-1">
+                  {renderStars(Math.round(averageRating))}
+                </div>
+                <div className="text-sm text-gray-500">
+                  {totalReviews} review{totalReviews !== 1 ? 's' : ''}
+                </div>
+              </div>
+              <div className="flex-1">
+                {[5, 4, 3, 2, 1].map((star) => {
+                  const count = ratingDistribution[star] || 0;
+                  const percentage = totalReviews > 0 ? (count / totalReviews) * 100 : 0;
+                  return (
+                    <div key={star} className="flex items-center space-x-2 text-sm">
+                      <span className="w-3">{star}</span>
+                      <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                      <div className="flex-1 bg-gray-200 rounded-full h-2">
+                        <div
+                          className="bg-yellow-400 h-2 rounded-full transition-all duration-300"
+                          style={{ width: `${percentage}%` }}
+                        />
+                      </div>
+                      <span className="w-8 text-gray-500">{count}</span>
                     </div>
-                    <span className="w-8 text-gray-500">{count}</span>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          )}
         </CardContent>
       </Card>
 
@@ -427,23 +284,13 @@ export function ReviewSystem({
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
             <p className="text-gray-500 mt-2">Loading reviews...</p>
           </div>
-        ) : reviews.length === 0 && totalReviews === 0 ? (
+        ) : reviews.length === 0 ? (
           <Card>
             <CardContent className="text-center py-8">
               <MessageSquare className="h-12 w-12 text-gray-400 mx-auto mb-4" />
               <p className="text-gray-500">No reviews yet</p>
               <p className="text-sm text-gray-400">
                 Be the first to review {sellerName}!
-              </p>
-            </CardContent>
-          </Card>
-        ) : reviews.length === 0 && totalReviews > 0 ? (
-          <Card>
-            <CardContent className="text-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-              <p className="text-gray-500">Loading review details...</p>
-              <p className="text-sm text-gray-400">
-                Found {totalReviews} review{totalReviews !== 1 ? 's' : ''}, loading content...
               </p>
             </CardContent>
           </Card>
@@ -507,30 +354,6 @@ export function ReviewSystem({
                 </CardContent>
               </Card>
             ))}
-            
-            {/* Load More Button */}
-            {hasMore && (
-              <div className="text-center">
-                <Button
-                  variant="outline"
-                  onClick={handleLoadMore}
-                  disabled={loadingMore}
-                  className="w-full"
-                >
-                  {loadingMore ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
-                      Loading more reviews...
-                    </>
-                  ) : (
-                    <>
-                      <ChevronDown className="h-4 w-4 mr-2" />
-                      Load More Reviews
-                    </>
-                  )}
-                </Button>
-              </div>
-            )}
           </>
         )}
       </div>

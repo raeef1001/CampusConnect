@@ -25,10 +25,15 @@ import ReceivedBidsPage from "./pages/ReceivedBids";
 import IncomingOrdersPage from "./pages/IncomingOrders";
 import OutgoingOrdersPage from "./pages/OutgoingOrders";
 import ModerationPage from "./pages/ModerationPage";
+import Services from "./pages/Services";
+import CreateService from "./pages/CreateService";
+import ServiceDetails from "./pages/ServiceDetails";
+import ServiceRequests from "./pages/ServiceRequests";
 import NotFound from "./pages/NotFound";
 import { auth } from "./lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { CartProvider } from "./context/CartContext";
+import { cacheWarmingService } from "./services/cacheWarmingService";
 
 const queryClient = new QueryClient();
 
@@ -316,6 +321,54 @@ const AnimatedRoutes = ({ isAuthenticated }: AnimatedRoutesProps) => {
             transition={pageTransition}
           >
             {isAuthenticated ? <IncomingOrdersPage /> : <Navigate to="/auth" />}
+          </motion.div>
+        } />
+        <Route path="/services" element={
+          <motion.div
+            key="services"
+            initial="initial"
+            animate="in"
+            exit="out"
+            variants={pageVariants}
+            transition={pageTransition}
+          >
+            {isAuthenticated ? <Services /> : <Navigate to="/auth" />}
+          </motion.div>
+        } />
+        <Route path="/services/create" element={
+          <motion.div
+            key="create-service"
+            initial="initial"
+            animate="in"
+            exit="out"
+            variants={pageVariants}
+            transition={pageTransition}
+          >
+            {isAuthenticated ? <CreateService /> : <Navigate to="/auth" />}
+          </motion.div>
+        } />
+        <Route path="/services/:id" element={
+          <motion.div
+            key="service-details"
+            initial="initial"
+            animate="in"
+            exit="out"
+            variants={pageVariants}
+            transition={pageTransition}
+          >
+            {isAuthenticated ? <ServiceDetails /> : <Navigate to="/auth" />}
+          </motion.div>
+        } />
+        <Route path="/service-requests" element={
+          <motion.div
+            key="service-requests"
+            initial="initial"
+            animate="in"
+            exit="out"
+            variants={pageVariants}
+            transition={pageTransition}
+          >
+            {isAuthenticated ? <ServiceRequests /> : <Navigate to="/auth" />}
           </motion.div>
         } />
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

@@ -19,6 +19,7 @@ import { Skeleton } from "@/components/ui/skeleton"; // Import Skeleton
 import { useToast } from '@/components/ui/use-toast'; // Import useToast
 import { ListingCard } from "@/components/marketplace/ListingCard"; // Import ListingCard
 import { Listing } from "@/types/listing"; // Import Listing type
+import { useOptimizedUserProfile, useOptimizedUserListings, useOptimizedReviews, useUpdateUserProfile } from "@/hooks/useOptimizedData";
 
 interface UserProfile {
   uid: string;
