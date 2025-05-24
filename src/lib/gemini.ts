@@ -14,9 +14,16 @@ export { model };
 
 // Import the Listing interface from types
 import { Listing } from "@/types/listing";
+import { UserProfile, Message, Notification } from "@/types/chat"; // Import new types
 
 // Enhanced function to generate AI response about listings with product recommendations
-export async function generateListingResponse(userMessage: string, listings: Listing[]) {
+export async function generateListingResponse(
+  userMessage: string,
+  listings: Listing[],
+  userProfiles?: UserProfile[], // Optional user profiles
+  messages?: Message[], // Optional messages
+  notifications?: Notification[] // Optional notifications
+) {
   try {
     // Create a context about available listings
     const listingsContext = listings.map(listing => ({
@@ -24,15 +31,49 @@ export async function generateListingResponse(userMessage: string, listings: Lis
       title: listing.title,
       description: listing.description,
       price: listing.price,
-      category: listing.category, // Use category string
+      image: listing.image,
+      imageUrl: listing.imageUrl,
+      sellerId: listing.sellerId,
+      category: listing.category,
       condition: listing.condition,
       location: listing.location || (listing.locations && listing.locations.length > 0 ? listing.locations[0].name : 'Unknown'),
-      seller: listing.seller?.name || 'Unknown',
-      university: listing.seller?.university || 'Unknown',
-      rating: listing.seller?.rating || 'N/A'
+      locations: listing.locations, // Include detailed location data
+      deliveryRadius: listing.deliveryRadius,
+      isAvailable: listing.isAvailable,
+      availabilityStatus: listing.availabilityStatus,
+      createdAt: listing.createdAt,
+      updatedAt: listing.updatedAt,
+      seller: listing.seller, // Include full seller object
+      isService: listing.isService
     }));
 
-    const prompt = `
+    // Create context for user profiles, messages, and notifications if provided
+    const userProfilesContext = userProfiles ? userProfiles.map(profile => ({
+      uid: profile.uid,
+      name: profile.name,
+      university: profile.university,
+      rating: profile.rating,
+      // Exclude avatar for brevity in prompt, or include if relevant for AI
+    })) : [];
+
+    const messagesContext = messages ? messages.map(msg => ({
+      id: msg.id,
+      senderId: msg.senderId,
+      text: msg.text,
+      listingId: msg.listingId,
+      createdAt: msg.createdAt,
+    })) : [];
+
+    const notificationsContext = notifications ? notifications.map(notif => ({
+      userId: notif.userId,
+      type: notif.type,
+      message: notif.message,
+      relatedId: notif.relatedId,
+      read: notif.read,
+      createdAt: notif.createdAt,
+    })) : [];
+
+    let prompt = `
 You are a helpful AI assistant for CampusConnect, a student marketplace platform. You help users find products and services listed by other students. You can search listings by:
 - Product title and description
 - Categories
@@ -42,18 +83,42 @@ You are a helpful AI assistant for CampusConnect, a student marketplace platform
 - Seller's rating
 
 Current available listings:
-
-Current available listings:
 ${JSON.stringify(listingsContext, null, 2)}
+`;
 
+    if (userProfilesContext.length > 0) {
+      prompt += `
+Current user profiles:
+${JSON.stringify(userProfilesContext, null, 2)}
+`;
+    }
+
+    if (messagesContext.length > 0) {
+      prompt += `
+Current messages:
+${JSON.stringify(messagesContext, null, 2)}
+`;
+    }
+
+    if (notificationsContext.length > 0) {
+      prompt += `
+Current notifications:
+${JSON.stringify(notificationsContext, null, 2)}
+`;
+    }
+
+    prompt += `
 User question: "${userMessage}"
 
-Please provide a helpful response about the available listings. You can:
+Please provide a helpful response about the available listings, user profiles, messages, or notifications. You can:
 - Help users find specific products or services
 - Compare different listings
 - Provide information about prices, conditions, and sellers
 - Suggest alternatives if exact matches aren't found
 - Answer general questions about the marketplace
+- Provide information about users based on their profiles
+- Summarize recent messages or notifications
+- Answer questions related to chat history or notification events
 
 IMPORTANT FORMATTING RULES:
 - DO NOT use any markdown formatting (no asterisks, underscores, or other markdown symbols)
@@ -64,7 +129,7 @@ IMPORTANT FORMATTING RULES:
 
 Example response format: "I found a red t-shirt [LISTING:abc123] that matches your request. It's in like new condition and priced at $10."
 
-Keep your response conversational, helpful, and focused on the available listings. If the user asks about something not available in the listings, suggest they create a listing request or check back later.
+Keep your response conversational, helpful, and focused on the available data. If the user asks about something not available in the provided context, suggest they create a listing request or check back later.
 
 If you're recommending multiple products, mention the most relevant ones and include their listing IDs.
 `;

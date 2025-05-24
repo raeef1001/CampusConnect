@@ -5,6 +5,7 @@ export interface LocationData {
   lng: number;
   type: 'main' | 'delivery' | 'pickup';
   name?: string;
+  address?: string; // Added to store the human-readable address
 }
 
 export interface Listing {

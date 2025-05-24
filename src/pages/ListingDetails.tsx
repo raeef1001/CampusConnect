@@ -9,7 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Heart, MessageSquare, MapPin, Star, ArrowLeft, Truck, Navigation, Edit } from "lucide-react";
+import { Heart, MessageSquare, MapPin, Star, ArrowLeft, Truck, Navigation, Edit, ShoppingCart } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/components/ui/use-toast";
 import { reverseGeocode, getLocationName } from "@/utils/geocoding";
@@ -17,6 +17,7 @@ import LocationDisplay from "@/components/LocationDisplay";
 import BidDialog from "@/components/ui/bid-dialog";
 import { ReviewSystem } from "@/components/marketplace/ReviewSystem";
 import { Listing, LocationData } from "@/types/listing.d";
+import { useCart } from "@/context/CartContext"; // Import useCart hook
 
 interface SellerProfile {
   name: string;
@@ -37,6 +38,8 @@ export default function ListingDetails() {
   const { toast } = useToast();
   const [sellerProfile, setSellerProfile] = useState<SellerProfile | null>(null);
   const [loadingSeller, setLoadingSeller] = useState(true);
+  const [quantityToAdd, setQuantityToAdd] = useState(1); // State for quantity to add
+  const { addToCart, getCartItemQuantity } = useCart(); // Use cart context
 
   useEffect(() => {
     const fetchListingAndFavoriteStatus = async () => {
@@ -207,6 +210,11 @@ export default function ListingDetails() {
     if (listing) {
       navigate("/messages", { state: { sellerId: listing.sellerId, listingId: id } });
     }
+  };
+
+  const handleAddToCart = async () => {
+    if (!listing) return;
+    await addToCart(listing, quantityToAdd);
   };
 
   const handleBid = () => {
@@ -447,6 +455,42 @@ export default function ListingDetails() {
                     <div className="space-y-2">
                       {(listing.isAvailable !== false && (listing.availabilityStatus === 'available' || !listing.availabilityStatus)) ? (
                         <div className="space-y-2">
+                          {/* Add to Cart Button */}
+                          {!isService && ( // Only show for products, not services
+                            <div className="flex items-center space-x-2 mb-4">
+                              <Button 
+                                variant="outline" 
+                                size="icon" 
+                                onClick={() => setQuantityToAdd(prev => Math.max(1, prev - 1))}
+                                aria-label="Decrease quantity"
+                              >
+                                -
+                              </Button>
+                              <input
+                                type="number"
+                                value={quantityToAdd}
+                                onChange={(e) => setQuantityToAdd(Math.max(1, parseInt(e.target.value) || 1))}
+                                className="w-16 text-center border rounded-md py-2"
+                                min="1"
+                              />
+                              <Button 
+                                variant="outline" 
+                                size="icon" 
+                                onClick={() => setQuantityToAdd(prev => prev + 1)}
+                                aria-label="Increase quantity"
+                              >
+                                +
+                              </Button>
+                              <Button 
+                                className="flex-1 gap-2 text-lg py-6" 
+                                onClick={handleAddToCart}
+                              >
+                                <ShoppingCart className="h-5 w-5" />
+                                Add to Cart
+                              </Button>
+                            </div>
+                          )}
+
                           <Button variant="primary-warm" className="w-full gap-2 text-lg py-6" onClick={handleContactSeller}>
                             <MessageSquare className="h-5 w-5" />
                             Contact Seller

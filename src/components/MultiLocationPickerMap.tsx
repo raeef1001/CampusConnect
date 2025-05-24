@@ -1,11 +1,21 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MapContainer, TileLayer, Marker, useMapEvents, Popup } from 'react-leaflet';
+import { MapContainer as LeafletMapContainer, TileLayer as LeafletTileLayer, Marker as LeafletMarker, useMapEvents, Popup, MapContainerProps, TileLayerProps, MarkerProps } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { MapPin, Trash2, Navigation } from 'lucide-react';
+import { LocationData } from '@/types/listing.d'; // Import LocationData from types
+import { reverseGeocode, getLocationName } from '@/utils/geocoding'; // Import geocoding utilities
+
+// Type assertions to bypass problematic react-leaflet types
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const MapContainer: React.ComponentType<any> = LeafletMapContainer;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const TileLayer: React.ComponentType<any> = LeafletTileLayer;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const Marker: React.ComponentType<any> = LeafletMarker;
 
 // Fix for default icon issue with Leaflet and Webpack/Vite
 delete L.Icon.Default.prototype._getIconUrl;
@@ -27,14 +37,6 @@ const createCustomIcon = (color: string) => {
 
 const mainLocationIcon = createCustomIcon('#ef4444'); // Red for main location
 const deliveryLocationIcon = createCustomIcon('#3b82f6'); // Blue for delivery locations
-
-export interface LocationData {
-  id: string;
-  lat: number;
-  lng: number;
-  type: 'main' | 'delivery';
-  name?: string;
-}
 
 interface MultiLocationPickerMapProps {
   onLocationsChange: (locations: LocationData[]) => void;
@@ -66,47 +68,65 @@ const MultiLocationPickerMap: React.FC<MultiLocationPickerMapProps> = ({
       click: (e) => {
         const { lat, lng } = e.latlng;
         
-        if (mode === 'main') {
-          // Remove existing main location and add new one
-          const newLocations = locations.filter(loc => loc.type !== 'main');
-          const newMainLocation: LocationData = {
-            id: `main-${Date.now()}`,
-            lat,
-            lng,
-            type: 'main',
-            name: 'Main Selling Location'
-          };
-          setLocations([...newLocations, newMainLocation]);
-        } else if (mode === 'delivery') {
-          // Check if we can add more delivery locations
-          if (deliveryLocations.length >= maxDeliveryLocations) {
-            alert(`Maximum ${maxDeliveryLocations} delivery locations allowed`);
-            return;
+        const addLocation = async (type: 'main' | 'delivery', namePrefix: string) => {
+          let fullAddress = '';
+          try {
+            fullAddress = await reverseGeocode(lat, lng); // Get the full address for the location
+          } catch (error) {
+            console.error('Failed to reverse geocode:', error);
+            fullAddress = `${lat.toFixed(4)}, ${lng.toFixed(4)}`; // Fallback to coordinates
           }
 
-          // Check if location is within delivery radius of main location
-          if (mainLocation) {
-            const distance = calculateDistance(
-              mainLocation.lat, 
-              mainLocation.lng, 
-              lat, 
-              lng
-            );
-            
-            if (distance > deliveryRadius) {
-              alert(`Delivery location must be within ${deliveryRadius}km of the main location`);
+          if (type === 'main') {
+            // Remove existing main location and add new one
+            const newLocations = locations.filter(loc => loc.type !== 'main');
+            const newMainLocation: LocationData = {
+              id: `main-${Date.now()}`,
+              lat,
+              lng,
+              type: 'main',
+              name: fullAddress, // Store the full address as the name
+              address: fullAddress // Store the full address
+            };
+            setLocations([...newLocations, newMainLocation]);
+          } else if (type === 'delivery') {
+            // Check if we can add more delivery locations
+            if (deliveryLocations.length >= maxDeliveryLocations) {
+              alert(`Maximum ${maxDeliveryLocations} delivery locations allowed`);
               return;
             }
-          }
 
-          const newDeliveryLocation: LocationData = {
-            id: `delivery-${Date.now()}`,
-            lat,
-            lng,
-            type: 'delivery',
-            name: `Delivery Location ${deliveryLocations.length + 1}`
-          };
-          setLocations([...locations, newDeliveryLocation]);
+            // Check if location is within delivery radius of main location
+            if (mainLocation) {
+              const distance = calculateDistance(
+                mainLocation.lat, 
+                mainLocation.lng, 
+                lat, 
+                lng
+              );
+              
+              if (distance > deliveryRadius) {
+                alert(`Delivery location must be within ${deliveryRadius}km of the main location`);
+                return;
+              }
+            }
+
+            const newDeliveryLocation: LocationData = {
+              id: `delivery-${Date.now()}`,
+              lat,
+              lng,
+              type: 'delivery',
+              name: fullAddress, // Store the full address as the name
+              address: fullAddress // Store the full address
+            };
+            setLocations([...locations, newDeliveryLocation]);
+          }
+        };
+
+        if (mode === 'main') {
+          addLocation('main', 'Main Selling Location');
+        } else if (mode === 'delivery') {
+          addLocation('delivery', 'Delivery Location');
         }
       },
     });
@@ -214,10 +234,13 @@ const MultiLocationPickerMap: React.FC<MultiLocationPickerMapProps> = ({
             <Marker 
               key={location.id}
               position={[location.lat, location.lng]}
+              icon={location.type === 'main' ? mainLocationIcon : deliveryLocationIcon}
             >
               <Popup>
                 <div className="text-center">
-                  <p className="font-medium">{location.name}</p>
+                  <p className="font-medium">
+                    {location.name || location.address || 'Unnamed Location'}
+                  </p>
                   <p className="text-xs text-gray-500">
                     {location.lat.toFixed(6)}, {location.lng.toFixed(6)}
                   </p>
@@ -257,7 +280,7 @@ const MultiLocationPickerMap: React.FC<MultiLocationPickerMapProps> = ({
                 <div className="flex items-center justify-between p-2 bg-red-50 rounded-lg">
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                    <span className="text-sm font-medium">Main Selling Location</span>
+                    <span className="text-sm font-medium">{mainLocation.name || 'Main Selling Location'}</span>
                   </div>
                   <Badge variant="secondary">Primary</Badge>
                 </div>
@@ -266,7 +289,7 @@ const MultiLocationPickerMap: React.FC<MultiLocationPickerMapProps> = ({
                 <div key={location.id} className="flex items-center justify-between p-2 bg-blue-50 rounded-lg">
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                    <span className="text-sm">Delivery Location {index + 1}</span>
+                    <span className="text-sm">{location.name || `Delivery Location ${index + 1}`}</span>
                   </div>
                   <Badge variant="outline">
                     {mainLocation && calculateDistance(

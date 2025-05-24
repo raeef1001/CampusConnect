@@ -10,7 +10,8 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { FloatingChat } from "@/components/ui/floating-chat";
 import { PriceAdvisor } from "@/components/ui/price-advisor";
 import { ImageAnalyzer } from "@/components/ui/image-analyzer";
-import MultiLocationPickerMap, { LocationData } from "@/components/MultiLocationPickerMap";
+import MultiLocationPickerMap from "@/components/MultiLocationPickerMap";
+import { LocationData } from '@/types/listing.d'; // Import LocationData from types
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, Sparkles, MapPin } from 'lucide-react';
 import { db, auth, storage } from '@/lib/firebase';
