@@ -21,16 +21,15 @@ import {
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
-import {
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  Legend,
-  CartesianGrid
-} from "recharts";
+import { AdvertisementCard } from "@/components/marketplace/AdvertisementCard";
+
+interface FilterState {
+  category: string;
+  priceRange: [number, number];
+  condition: string[];
+  university: string;
+  sellerName: string;
+}
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -50,6 +49,7 @@ export default function Dashboard() {
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000]);
   const [selectedConditions, setSelectedConditions] = useState<string[]>([]);
   const [selectedUniversity, setSelectedUniversity] = useState("");
+  const [sellerNameFilter, setSellerNameFilter] = useState("");
 
   // Memoized current filters object for FilterSidebar
   const currentFilters = useMemo(() => ({
@@ -57,14 +57,16 @@ export default function Dashboard() {
     priceRange: priceRange,
     condition: selectedConditions,
     university: selectedUniversity,
-  }), [selectedCategory, priceRange, selectedConditions, selectedUniversity]);
+    sellerName: sellerNameFilter,
+  }), [selectedCategory, priceRange, selectedConditions, selectedUniversity, sellerNameFilter]);
 
   // Handler for applying filters from FilterSidebar
-  const handleFilterChange = useCallback((filters: { category: string; priceRange: [number, number]; condition: string[]; university: string; }) => {
+  const handleFilterChange = useCallback((filters: { category: string; priceRange: [number, number]; condition: string[]; university: string; sellerName: string; }) => {
     setSelectedCategory(filters.category);
     setPriceRange(filters.priceRange);
     setSelectedConditions(filters.condition);
     setSelectedUniversity(filters.university);
+    setSellerNameFilter(filters.sellerName);
     setCurrentPage(1); // Reset to first page on filter change
   }, []);
 
@@ -74,6 +76,7 @@ export default function Dashboard() {
     setPriceRange([0, 1000]);
     setSelectedConditions([]);
     setSelectedUniversity("");
+    setSellerNameFilter("");
     setCurrentPage(1); // Reset to first page on filter reset
   }, []);
 
@@ -225,32 +228,6 @@ export default function Dashboard() {
     setCurrentPage(page);
   };
 
-  const chartData = useMemo(() => {
-    const monthlyListings: { [key: string]: number } = {};
-    
-    listings.forEach((listing) => {
-      const date = listing.createdAt?.toDate();
-      if (date) {
-        const month = date.toLocaleString('default', { month: 'short' });
-        const year = date.getFullYear();
-        const key = `${month} ${year}`; // e.g., "Jan 2024"
-        monthlyListings[key] = (monthlyListings[key] || 0) + 1;
-      }
-    });
-
-    // Sort months chronologically for the chart
-    const sortedMonths = Object.keys(monthlyListings).sort((a, b) => {
-      const dateA = new Date(a);
-      const dateB = new Date(b);
-      return dateA.getTime() - dateB.getTime();
-    });
-
-    return sortedMonths.map(monthYear => ({
-      name: monthYear,
-      listings: monthlyListings[monthYear],
-    }));
-  }, [listings]);
-
   return (
     <div className="min-h-screen bg-background">
       <Navbar isAuthenticated={true} />
@@ -271,6 +248,7 @@ export default function Dashboard() {
                   onFilterChange={handleFilterChange} 
                   onResetFilters={handleResetFilters} 
                   currentFilters={currentFilters} 
+                  onSellerNameChange={setSellerNameFilter}
                 />
               </div>
             </div>
@@ -287,29 +265,9 @@ export default function Dashboard() {
                 </div>
               </div>
               
-              {/* Analytics/Overview Section with Chart */}
-              <div className="mb-8 bg-card p-6 rounded-lg shadow-sm border border-border">
-                <h2 className="text-xl font-semibold mb-4">Listings Overview</h2>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--muted))" />
-                      <XAxis dataKey="name" stroke="hsl(var(--foreground))" />
-                      <YAxis stroke="hsl(var(--foreground))" />
-                      <Tooltip 
-                        contentStyle={{ 
-                          backgroundColor: 'hsl(var(--card))', 
-                          borderColor: 'hsl(var(--border))', 
-                          borderRadius: '0.5rem' 
-                        }}
-                        labelStyle={{ color: 'hsl(var(--foreground))' }}
-                        itemStyle={{ color: 'hsl(var(--foreground))' }}
-                      />
-                      <Legend />
-                      <Bar dataKey="listings" fill="hsl(var(--primary-warm))" radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
+              {/* Advertisement Section */}
+              <div className="mb-8">
+                <AdvertisementCard />
               </div>
 
               <div className="bg-card p-4 rounded-lg shadow-sm border border-border">
