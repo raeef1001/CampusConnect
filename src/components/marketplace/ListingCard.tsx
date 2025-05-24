@@ -13,6 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { addNotification } from "@/utils/notifications"; // Import addNotification utility
 import { getLocationName } from "@/utils/geocoding";
 import BidDialog from "@/components/ui/bid-dialog";
+import { useCart } from "@/context/CartContext"; // Import useCart hook
 
 interface SellerProfile {
   name: string;
@@ -73,6 +74,7 @@ export function ListingCard({
   const [showBidDialog, setShowBidDialog] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { addToCart } = useCart();
   // sellerProfile and loadingSeller states are no longer needed as seller prop is complete
   // const [sellerProfile, setSellerProfile] = useState<SellerProfile | null>(null);
   // const [loadingSeller, setLoadingSeller] = useState(true);
@@ -167,6 +169,46 @@ export function ListingCard({
     navigate("/messages", { state: { sellerId: listingUserId || seller.userId, listingId: id } });
   };
 
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const user = auth.currentUser;
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please log in to add items to cart.",
+        variant: "destructive",
+      });
+      return;
+    }
+    const mainLocation = locations.find(loc => loc.type === 'main');
+    addToCart({
+      id,
+      title,
+      price,
+      condition,
+      description,
+      image: image, // Use image from props for 'image'
+      imageUrl: image, // Use image from props for 'imageUrl'
+      sellerId: seller.userId,
+      category, // Keep for backward compatibility if needed
+      categories: [category], // Convert single category to array
+      isService,
+      location: mainLocation ? mainLocation.name || 'Unknown Location' : 'Unknown Location', // Provide a value for 'location'
+      locations,
+      deliveryRadius,
+      isAvailable,
+      availabilityStatus,
+      createdAt: {
+        seconds: Math.floor(Date.now() / 1000),
+        nanoseconds: 0,
+      }, // Dummy createdAt for cart context
+    }, 1); // Add 1 quantity by default
+    toast({
+      title: "Added to Cart",
+      description: `'${title}' has been added to your cart.`,
+    });
+  };
+
   const handleBid = (e: React.MouseEvent) => {
     e.stopPropagation();
     const user = auth.currentUser;
@@ -182,14 +224,14 @@ export function ListingCard({
   };
 
   return (
-    <Link to={`/listings/${id}`} className="block">
-      <Card 
-        className={cn(
-          "group transition-all duration-300 cursor-pointer overflow-hidden flex flex-col", // Added flex flex-col
-          "shadow-sm hover:shadow-md hover:shadow-lg hover:scale-[1.02] hover:border-primary-warm",
-          "h-full" // Ensure card takes full height of its grid cell
-        )}
-      >
+    <Card 
+      className={cn(
+        "group transition-all duration-300 cursor-pointer overflow-hidden flex flex-col", // Added flex flex-col
+        "shadow-sm hover:shadow-md hover:shadow-lg hover:scale-[1.02] hover:border-primary-warm",
+        "h-full" // Ensure card takes full height of its grid cell
+      )}
+    >
+      <Link to={`/listings/${id}`} className="block">
         <CardContent className="p-0 flex-grow flex flex-col"> {/* Added flex-grow and flex flex-col */}
           <div className="relative">
             <div className="overflow-hidden">
@@ -310,51 +352,56 @@ export function ListingCard({
             </div>
           </div>
         </CardContent>
-        
-        <CardFooter className="pt-0 px-4 pb-4">
-          {(isAvailable !== false && (availabilityStatus === 'available' || !availabilityStatus)) ? (
-            <div className="w-full space-y-2">
-              <Button className="w-full gap-2 text-sm py-3 bg-warm-50 hover:bg-warm-100 text-warm-700" variant="ghost" onClick={handleContactSeller}>
-                <MessageSquare className="h-4 w-4" />
-                Contact Seller
+      </Link>
+      
+      <CardFooter className="pt-0 px-4 pb-4">
+        {(isAvailable !== false && (availabilityStatus === 'available' || !availabilityStatus)) ? (
+          <div className="w-full space-y-2">
+            {!isService && (
+              <Button className="w-full gap-2 text-sm py-3 bg-blue-50 hover:bg-blue-100 text-blue-700" variant="ghost" onClick={handleAddToCart}>
+                🛒 Add to Cart
               </Button>
-              {!isService && (
-                <Button className="w-full gap-2 text-sm py-3 bg-green-50 hover:bg-green-100 text-green-700" variant="ghost" onClick={handleBid}>
-                  💰 Place Bid
-                </Button>
-              )}
-            </div>
-          ) : (
-            <Button 
-              className="w-full gap-2 text-base py-5 cursor-not-allowed opacity-60" 
-              variant="outline" 
-              disabled
-            >
+            )}
+            <Button className="w-full gap-2 text-sm py-3 bg-warm-50 hover:bg-warm-100 text-warm-700" variant="ghost" onClick={handleContactSeller}>
               <MessageSquare className="h-4 w-4" />
-              {availabilityStatus === 'sold' && 'Item Sold'}
-              {availabilityStatus === 'reserved' && 'Item Reserved'}
-              {availabilityStatus === 'unavailable' && 'Unavailable'}
-              {!availabilityStatus && 'Unavailable'}
+              Contact Seller
             </Button>
-          )}
-        </CardFooter>
+            {!isService && (
+              <Button className="w-full gap-2 text-sm py-3 bg-green-50 hover:bg-green-100 text-green-700" variant="ghost" onClick={handleBid}>
+                💰 Place Bid
+              </Button>
+            )}
+          </div>
+        ) : (
+          <Button 
+            className="w-full gap-2 text-base py-5 cursor-not-allowed opacity-60" 
+            variant="outline" 
+            disabled
+          >
+            <MessageSquare className="h-4 w-4" />
+            {availabilityStatus === 'sold' && 'Item Sold'}
+            {availabilityStatus === 'reserved' && 'Item Reserved'}
+            {availabilityStatus === 'unavailable' && 'Unavailable'}
+            {!availabilityStatus && 'Unavailable'}
+          </Button>
+        )}
+      </CardFooter>
 
-        {/* Bid Dialog */}
-        <BidDialog
-          isOpen={showBidDialog}
-          onClose={() => setShowBidDialog(false)}
-          listing={{
-            id,
-            title,
-            price: parseFloat(String(price).replace('$', '')),
-            sellerId: listingUserId || seller.userId || seller?.userId || '',
-            sellerName: seller.name,
-            category,
-            condition,
-            imageUrl: image,
-          }}
-        />
-      </Card>
-    </Link>
+      {/* Bid Dialog */}
+      <BidDialog
+        isOpen={showBidDialog}
+        onClose={() => setShowBidDialog(false)}
+        listing={{
+          id,
+          title,
+          price: parseFloat(String(price).replace('$', '')),
+          sellerId: listingUserId || seller.userId || seller?.userId || '',
+          sellerName: seller.name,
+          category,
+          condition,
+          imageUrl: image,
+        }}
+      />
+    </Card>
   );
 }
