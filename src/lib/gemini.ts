@@ -24,7 +24,7 @@ export async function generateListingResponse(userMessage: string, listings: Lis
       title: listing.title,
       description: listing.description,
       price: listing.price,
-      category: listing.category,
+      categories: listing.categories, // Use categories array
       condition: listing.condition,
       seller: listing.seller?.name || 'Unknown',
       university: listing.seller?.university || 'Unknown'
@@ -88,7 +88,7 @@ export function getListingsByIds(listingIds: string[], allListings: Listing[]): 
 export interface ImageAnalysisResult {
   title: string;
   description: string;
-  category: string;
+  categories: string[]; // Changed to array of strings
   condition: string;
   suggestedPrice: number;
   confidence: number;
@@ -105,7 +105,7 @@ Analyze this image and create a marketplace listing for a student marketplace pl
 
 1. A clear, descriptive title (max 60 characters)
 2. A detailed description (2-3 sentences)
-3. The most appropriate category from: Electronics, Textbooks, Services, Furniture, Academic Supplies, Other
+3. The most appropriate categories from: Electronics, Textbooks, Services, Furniture, Academic Supplies, Other. Provide up to 3 categories, comma-separated.
 4. The condition from: New, Like New, Good, Used, Fair
 5. A suggested price in USD (consider this is a student marketplace, so prices should be reasonable)
 6. Your confidence level (0-100) in the analysis
@@ -113,7 +113,7 @@ Analyze this image and create a marketplace listing for a student marketplace pl
 Please respond in this EXACT format:
 TITLE: [title here]
 DESCRIPTION: [description here]
-CATEGORY: [category here]
+CATEGORIES: [category1, category2, ...]
 CONDITION: [condition here]
 PRICE: [number only]
 CONFIDENCE: [number 0-100]
@@ -137,16 +137,17 @@ Be specific about what you see in the image. If it's a textbook, include the sub
     // Parse the response
     const titleMatch = text.match(/TITLE:\s*(.+)/);
     const descriptionMatch = text.match(/DESCRIPTION:\s*(.+)/);
-    const categoryMatch = text.match(/CATEGORY:\s*(.+)/);
+    const categoriesMatch = text.match(/CATEGORIES:\s*\[(.+)\]/); // Updated regex for array
     const conditionMatch = text.match(/CONDITION:\s*(.+)/);
     const priceMatch = text.match(/PRICE:\s*(\d+)/);
     const confidenceMatch = text.match(/CONFIDENCE:\s*(\d+)/);
 
-    if (titleMatch && descriptionMatch && categoryMatch && conditionMatch && priceMatch) {
+    if (titleMatch && descriptionMatch && categoriesMatch && conditionMatch && priceMatch) {
+      const categories = categoriesMatch[1].split(',').map(cat => cat.trim()); // Parse categories
       return {
         title: titleMatch[1].trim(),
         description: descriptionMatch[1].trim(),
-        category: categoryMatch[1].trim(),
+        categories: categories, // Use parsed categories
         condition: conditionMatch[1].trim(),
         suggestedPrice: parseInt(priceMatch[1]),
         confidence: confidenceMatch ? parseInt(confidenceMatch[1]) : 75
