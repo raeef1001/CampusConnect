@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { doc, getDoc, collection, addDoc, deleteDoc, query, where, getDocs, serverTimestamp } from "firebase/firestore";
 import { db, auth } from "@/lib/firebase";
+import { dbRateLimiter } from '@/lib/rateLimiter'; // Import the rate limiter
 import { Navbar } from "@/components/layout/Navbar";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { FloatingChat } from "@/components/ui/floating-chat";
@@ -46,7 +47,7 @@ export default function ListingDetails() {
       }
       try {
         const docRef = doc(db, "listings", id);
-        const docSnap = await getDoc(docRef);
+        const docSnap = await dbRateLimiter.execute(() => getDoc(docRef));
 
         if (docSnap.exists()) {
           const rawData = docSnap.data();
@@ -72,7 +73,11 @@ export default function ListingDetails() {
           if (listingData.sellerId) {
             try {
               const userDocRef = doc(db, "users", listingData.sellerId);
+<<<<<<< HEAD
               const userDocSnap = await getDoc(userDocRef);
+=======
+              const userDocSnap = await dbRateLimiter.execute(() => getDoc(userDocRef));
+>>>>>>> 6d5a776e3b0f50dc41009ebd9eec322ff44ed963
               if (userDocSnap.exists()) {
                 setSellerProfile(userDocSnap.data() as SellerProfile);
               } else {
@@ -114,7 +119,7 @@ export default function ListingDetails() {
             where("userId", "==", user.uid),
             where("listingId", "==", id)
           );
-          const querySnapshot = await getDocs(q);
+          const querySnapshot = await dbRateLimiter.execute(() => getDocs(q));
           setIsFavorited(!querySnapshot.empty);
         }
       } catch (err) {
@@ -148,9 +153,9 @@ export default function ListingDetails() {
           where("userId", "==", user.uid),
           where("listingId", "==", id)
         );
-        const querySnapshot = await getDocs(q);
+        const querySnapshot = await dbRateLimiter.execute(() => getDocs(q));
         querySnapshot.forEach(async (doc) => {
-          await deleteDoc(doc.ref);
+          await dbRateLimiter.execute(() => deleteDoc(doc.ref));
         });
         toast({
           title: "Bookmark Removed",
@@ -158,11 +163,11 @@ export default function ListingDetails() {
         });
       } else {
         // Add to favorites
-        await addDoc(collection(db, "bookmarks"), {
+        await dbRateLimiter.execute(() => addDoc(collection(db, "bookmarks"), {
           userId: user.uid,
           listingId: id,
           createdAt: serverTimestamp(),
-        });
+        }));
         toast({
           title: "Bookmark Added",
           description: "Listing added to your favorites!",
@@ -170,16 +175,27 @@ export default function ListingDetails() {
 
         // Create notification for the listing owner
         const listingOwnerId = listing?.sellerId;
+<<<<<<< HEAD
         const currentUser = auth.currentUser;
         if (currentUser && listingOwnerId && listingOwnerId !== currentUser.uid) {
           await addDoc(collection(db, "notifications"), {
+=======
+        const currentUser = auth.currentUser; // Get current user
+        if (currentUser && listingOwnerId && listingOwnerId !== currentUser.uid) { // Don't notify self, and ensure listingOwnerId exists
+          await dbRateLimiter.execute(() => addDoc(collection(db, "notifications"), {
+>>>>>>> 6d5a776e3b0f50dc41009ebd9eec322ff44ed963
             userId: listingOwnerId,
             type: "bookmark",
             message: `Your listing '${listing?.title}' has been bookmarked by ${currentUser.displayName || currentUser.email?.split('@')[0]}!`,
             read: false,
             createdAt: serverTimestamp(),
+<<<<<<< HEAD
             relatedId: id,
           });
+=======
+            relatedId: id, // Link to the listing
+          }));
+>>>>>>> 6d5a776e3b0f50dc41009ebd9eec322ff44ed963
         }
       }
       setIsFavorited(!isFavorited);
@@ -269,11 +285,19 @@ export default function ListingDetails() {
   }
 
   // Use sellerProfile for display
+<<<<<<< HEAD
   const displaySellerName = sellerProfile?.name || listing.seller?.name || "Unknown Seller";
   const displaySellerAvatar = sellerProfile?.avatar || listing.seller?.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${listing.seller?.userId || 'unknown'}`;
   const displaySellerUniversity = sellerProfile?.university || listing.seller?.university || "Unknown University";
   const displaySellerRating = sellerProfile?.rating || listing.seller?.rating || 0;
   const isService = listing.category === "Services";
+=======
+  const displaySellerName = sellerProfile?.name || listing.seller.name; // Use seller.name
+  const displaySellerAvatar = sellerProfile?.avatar || listing.seller.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${listing.seller.userId}`; // Use seller.avatar or seller.userId for fallback
+  const displaySellerUniversity = sellerProfile?.university || listing.seller.university; // Use seller.university
+  const displaySellerRating = sellerProfile?.rating || listing.seller.rating; // Use seller.rating
+  const isService = listing.category === "Services"; // Check if category is "Services"
+>>>>>>> 6d5a776e3b0f50dc41009ebd9eec322ff44ed963
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -314,7 +338,11 @@ export default function ListingDetails() {
                 </Button>
                 <div className="absolute top-4 left-4">
                   <Badge variant="secondary" className="bg-background/90 backdrop-blur-sm font-medium text-base">
+<<<<<<< HEAD
                     {listing.category}
+=======
+                    {listing.category} {/* Display category */}
+>>>>>>> 6d5a776e3b0f50dc41009ebd9eec322ff44ed963
                   </Badge>
                 </div>
               </div>
@@ -493,7 +521,11 @@ export default function ListingDetails() {
           listing={{
             id: listing.id,
             title: listing.title,
+<<<<<<< HEAD
             price: parseFloat(listing.price),
+=======
+            price: Number(listing.price),
+>>>>>>> 6d5a776e3b0f50dc41009ebd9eec322ff44ed963
             sellerId: listing.sellerId || '',
             sellerName: displaySellerName,
             category: listing.category,
