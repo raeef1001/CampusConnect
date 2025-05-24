@@ -11,7 +11,8 @@ import { Send, User, MessageSquare } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
-import { User as FirebaseUser } from "firebase/auth"; // Import Firebase User type
+import { User as FirebaseUser } from "firebase/auth";
+import { addNotification } from "@/utils/notifications"; // Import addNotification utility
 
 interface Chat {
   id: string;
@@ -200,16 +201,14 @@ export default function Messages() {
         updatedAt: serverTimestamp(),
       });
 
-      // Create notification for the recipient
+      // Create notification for the recipient using the utility function
       const chatPartner = getChatPartner(selectedChat);
       if (chatPartner && currentUser) {
-        await addDoc(collection(db, "notifications"), {
+        await addNotification({
           userId: chatPartner.uid,
           type: "message",
           message: `New message from ${currentUser.displayName || currentUser.email?.split('@')[0]}`,
-          read: false,
-          createdAt: serverTimestamp(),
-          relatedId: selectedChat.id, // Link to the chat
+          relatedId: selectedChat.id,
         });
       }
       setNewMessage("");

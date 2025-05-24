@@ -2,7 +2,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { db } from "@/lib/firebase";
-import { collection, getDocs, query, orderBy } from "firebase/firestore";
+import { collection, getDocs, query, orderBy, doc, getDoc } from "firebase/firestore"; // Import doc and getDoc
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Navbar } from "@/components/layout/Navbar";
@@ -52,22 +52,68 @@ export default function Dashboard() {
         const listingsCollectionRef = collection(db, "listings");
         const q = query(listingsCollectionRef, orderBy("createdAt", "desc"));
         const querySnapshot = await getDocs(q);
-        const fetchedListings = querySnapshot.docs.map((doc) => {
-          const data = doc.data();
-          const sellerData = data.seller || {}; // Ensure seller object exists
+        
+        const fetchedListingsPromises = querySnapshot.docs.map(async (listingDoc) => {
+          const data = listingDoc.data();
+          let sellerData = data.seller || {}; // Existing seller object
+
+          // If seller data is incomplete or missing, fetch from users collection
+          if (!sellerData.name || sellerData.name === "Unknown Seller" || !sellerData.university || sellerData.university === "Unknown University") {
+            if (data.userId) {
+              try {
+                const userDocRef = doc(db, "users", data.userId);
+                const userDocSnap = await getDoc(userDocRef);
+                if (userDocSnap.exists()) {
+                  const userData = userDocSnap.data();
+                  sellerData = {
+                    userId: data.userId,
+                    name: userData.name || userData.email?.split('@')[0] || "Unknown Seller",
+                    avatar: userData.avatar || "",
+                    university: userData.university || "Unknown University",
+                    rating: userData.rating || 0,
+                  };
+                } else {
+                  // User profile not found, use default unknown seller
+                  sellerData = {
+                    userId: data.userId,
+                    name: "Unknown Seller",
+                    avatar: "",
+                    university: "Unknown University",
+                    rating: 0,
+                  };
+                }
+              } catch (userFetchError) {
+                console.error(`Error fetching user profile for ${data.userId}:`, userFetchError);
+                // Fallback to default unknown seller on error
+                sellerData = {
+                  userId: data.userId,
+                  name: "Unknown Seller",
+                  avatar: "",
+                  university: "Unknown University",
+                  rating: 0,
+                };
+              }
+            } else {
+              // No userId available, use default unknown seller
+              sellerData = {
+                userId: "",
+                name: "Unknown Seller",
+                avatar: "",
+                university: "Unknown University",
+                rating: 0,
+              };
+            }
+          }
+
           return {
-            id: doc.id,
+            id: listingDoc.id,
             ...data,
-            seller: {
-              userId: sellerData.userId || "", // Ensure userId exists, provide empty string if not
-              name: sellerData.name || "Unknown Seller",
-              avatar: sellerData.avatar || "",
-              university: sellerData.university || "Unknown University",
-              rating: sellerData.rating || 0,
-            },
+            seller: sellerData,
           };
         });
-        setListings(fetchedListings);
+
+        const resolvedListings = await Promise.all(fetchedListingsPromises);
+        setListings(resolvedListings);
       } catch (err) {
         console.error("Error fetching listings:", err);
         setError(err);

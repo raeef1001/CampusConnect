@@ -7,14 +7,50 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { auth, db } from "@/lib/firebase"; // Import auth and db
+import { doc, getDoc, updateDoc } from "firebase/firestore"; // Import Firestore functions
+import { User as FirebaseUser } from "firebase/auth"; // Import Firebase User type
+import { useEffect } from "react"; // Import useEffect
 
 export default function Settings() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [emailNotifications, setEmailNotifications] = useState(true);
-  const [smsNotifications, setSmsNotifications] = useState(false);
+  const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null); // Current authenticated user
+  const [messageNotifications, setMessageNotifications] = useState(true);
+  const [bookmarkNotifications, setBookmarkNotifications] = useState(true);
+  const [systemNotifications, setSystemNotifications] = useState(true);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+
+  // Load user preferences
+  useEffect(() => {
+    const unsubscribeAuth = auth.onAuthStateChanged(async (user) => {
+      setCurrentUser(user);
+      if (user) {
+        const userDocRef = doc(db, "users", user.uid);
+        const userDocSnap = await getDoc(userDocRef);
+        if (userDocSnap.exists()) {
+          const data = userDocSnap.data();
+          setMessageNotifications(data.preferences?.messageNotifications ?? true);
+          setBookmarkNotifications(data.preferences?.bookmarkNotifications ?? true);
+          setSystemNotifications(data.preferences?.systemNotifications ?? true);
+        }
+      }
+    });
+    return () => unsubscribeAuth();
+  }, []);
+
+  // Save notification preferences to Firestore
+  const saveNotificationPreferences = async (type: string, value: boolean) => {
+    if (!currentUser) return;
+    try {
+      const userDocRef = doc(db, "users", currentUser.uid);
+      await updateDoc(userDocRef, `preferences.${type}`, value); // Correct way to update nested field
+      console.log(`Notification preference for ${type} updated to ${value}`);
+    } catch (error) {
+      console.error("Error saving notification preference:", error);
+    }
+  };
 
   const handlePasswordChange = (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,19 +89,36 @@ export default function Settings() {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="flex items-center justify-between">
-                      <Label htmlFor="email-notifications">Email Notifications</Label>
+                      <Label htmlFor="message-notifications">New Message Notifications</Label>
                       <Switch
-                        id="email-notifications"
-                        checked={emailNotifications}
-                        onCheckedChange={setEmailNotifications}
+                        id="message-notifications"
+                        checked={messageNotifications}
+                        onCheckedChange={(checked) => {
+                          setMessageNotifications(checked);
+                          saveNotificationPreferences("messageNotifications", checked);
+                        }}
                       />
                     </div>
                     <div className="flex items-center justify-between">
-                      <Label htmlFor="sms-notifications">SMS Notifications</Label>
+                      <Label htmlFor="bookmark-notifications">Listing Bookmark Notifications</Label>
                       <Switch
-                        id="sms-notifications"
-                        checked={smsNotifications}
-                        onCheckedChange={setSmsNotifications}
+                        id="bookmark-notifications"
+                        checked={bookmarkNotifications}
+                        onCheckedChange={(checked) => {
+                          setBookmarkNotifications(checked);
+                          saveNotificationPreferences("bookmarkNotifications", checked);
+                        }}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="system-notifications">System Announcements</Label>
+                      <Switch
+                        id="system-notifications"
+                        checked={systemNotifications}
+                        onCheckedChange={(checked) => {
+                          setSystemNotifications(checked);
+                          saveNotificationPreferences("systemNotifications", checked);
+                        }}
                       />
                     </div>
                   </CardContent>

@@ -156,7 +156,7 @@ export default function ListingDetails() {
         await addDoc(collection(db, "bookmarks"), {
           userId: user.uid,
           listingId: id,
-          createdAt: new Date(),
+          createdAt: serverTimestamp(),
         });
         toast({
           title: "Bookmark Added",
@@ -164,13 +164,13 @@ export default function ListingDetails() {
         });
 
         // Create notification for the listing owner
-        const listingOwnerId = listing.userId;
+        const listingOwnerId = listing?.userId; // Use optional chaining
         const currentUser = auth.currentUser; // Get current user
-        if (currentUser && listingOwnerId !== currentUser.uid) { // Don't notify self
+        if (currentUser && listingOwnerId && listingOwnerId !== currentUser.uid) { // Don't notify self, and ensure listingOwnerId exists
           await addDoc(collection(db, "notifications"), {
             userId: listingOwnerId,
             type: "bookmark",
-            message: `Your listing '${listing.title}' has been bookmarked by ${currentUser.displayName || currentUser.email?.split('@')[0]}!`,
+            message: `Your listing '${listing?.title}' has been bookmarked by ${currentUser.displayName || currentUser.email?.split('@')[0]}!`, // Use optional chaining for listing.title
             read: false,
             createdAt: serverTimestamp(),
             relatedId: id, // Link to the listing

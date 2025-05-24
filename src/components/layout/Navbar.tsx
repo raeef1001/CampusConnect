@@ -13,14 +13,17 @@ import { Input } from "@/components/ui/input";
 import { Bell, Search, Plus, MessageSquare, User, Settings, LogOut } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Link, useNavigate } from "react-router-dom";
+import { useUnreadNotificationsCount } from "@/hooks/useUnreadNotificationsCount"; // Import the new hook
 
 interface NavbarProps {
   isAuthenticated?: boolean;
   onCreateListing?: () => void;
+  onLogout?: () => void;
 }
 
 export function Navbar({ isAuthenticated = false, onCreateListing, onLogout }: NavbarProps) {
   const navigate = useNavigate();
+  const { unreadCount } = useUnreadNotificationsCount(); // Use the hook to get unread count
 
   // Support both demo and real auth for logout
   const handleLogout = () => {
@@ -105,9 +108,11 @@ export function Navbar({ isAuthenticated = false, onCreateListing, onLogout }: N
           <Button variant="ghost" size="icon" className="relative" onClick={() => navigate('/notifications')}>
             <Bell className="h-5 w-5" />
             {/* Placeholder for dynamic notification count */}
-            <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs bg-warm-500">
-              3
-            </Badge>
+            {unreadCount > 0 && (
+              <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs bg-warm-500">
+                {unreadCount}
+              </Badge>
+            )}
           </Button>
 
           <Button variant="ghost" size="icon" onClick={() => navigate('/messages')}>

@@ -7,9 +7,10 @@ import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { Link, useNavigate } from "react-router-dom";
 import { db, auth } from "@/lib/firebase";
-import { collection, addDoc, deleteDoc, query, where, getDocs, doc, getDoc, serverTimestamp } from "firebase/firestore"; // Import serverTimestamp
+import { collection, addDoc, deleteDoc, query, where, getDocs, doc, getDoc, serverTimestamp } from "firebase/firestore";
 import { useToast } from "@/components/ui/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
+import { addNotification } from "@/utils/notifications"; // Import addNotification utility
 
 interface SellerProfile {
   name: string;
@@ -101,23 +102,21 @@ export function ListingCard({
         await addDoc(collection(db, "bookmarks"), {
           userId: user.uid,
           listingId: id,
-          createdAt: new Date(),
+          createdAt: serverTimestamp(),
         });
         toast({
           title: "Bookmark Added",
           description: "Listing added to your favorites!",
         });
 
-        // Create notification for the listing owner
+        // Create notification for the listing owner using the utility function
         const listingOwnerId = seller.userId;
         if (auth.currentUser && listingOwnerId !== auth.currentUser.uid) { // Don't notify self
-          await addDoc(collection(db, "notifications"), {
+          await addNotification({
             userId: listingOwnerId,
             type: "bookmark",
             message: `Your listing '${title}' has been bookmarked by ${auth.currentUser.displayName || auth.currentUser.email?.split('@')[0]}!`,
-            read: false,
-            createdAt: serverTimestamp(),
-            relatedId: id, // Link to the listing
+            relatedId: id,
           });
         }
       }
@@ -150,11 +149,12 @@ export function ListingCard({
     <Link to={`/listings/${id}`} className="block">
       <Card 
         className={cn(
-          "group transition-all duration-300 cursor-pointer overflow-hidden",
-          "shadow-sm hover:shadow-md hover:shadow-lg hover:scale-[1.02] hover:border-primary-warm"
+          "group transition-all duration-300 cursor-pointer overflow-hidden flex flex-col", // Added flex flex-col
+          "shadow-sm hover:shadow-md hover:shadow-lg hover:scale-[1.02] hover:border-primary-warm",
+          "h-full" // Ensure card takes full height of its grid cell
         )}
       >
-        <CardContent className="p-0">
+        <CardContent className="p-0 flex-grow flex flex-col"> {/* Added flex-grow and flex flex-col */}
           <div className="relative">
             <div className="overflow-hidden">
               <img
@@ -183,31 +183,33 @@ export function ListingCard({
             </div>
           </div>
           
-          <div className="p-4">
-            <div className="flex items-start justify-between mb-2">
-              <h3 className="font-semibold text-lg line-clamp-1 group-hover:text-primary-warm transition-colors">
-                {title}
-              </h3>
-              <div className="text-right">
-                <p className="font-bold text-lg text-primary-warm">
-                  {isService ? `${price}/hr` : price}
-                </p>
-                {!isService && (
-                  <Badge variant={condition === "New" ? "default" : "outline"} className={cn(
-                    "text-xs",
-                    condition === "New" && "bg-warm-500"
-                  )}>
-                    {condition}
-                  </Badge>
-                )}
+          <div className="p-4 flex-grow flex flex-col justify-between"> {/* Added flex-grow and flex flex-col justify-between */}
+            <div> {/* Wrapper div for title and price/condition */}
+              <div className="flex items-start justify-between mb-2">
+                <h3 className="font-semibold text-lg line-clamp-1 group-hover:text-primary-warm transition-colors">
+                  {title}
+                </h3>
+                <div className="text-right">
+                  <p className="font-bold text-lg text-primary-warm">
+                    {isService ? `${price}/hr` : price}
+                  </p>
+                  {!isService && (
+                    <Badge variant={condition === "New" ? "default" : "outline"} className={cn(
+                      "text-xs",
+                      condition === "New" && "bg-warm-500"
+                    )}>
+                      {condition}
+                    </Badge>
+                  )}
+                </div>
               </div>
+              
+              <p className="text-sm text-muted-foreground line-clamp-2 mb-3 min-h-[2.5rem]"> {/* Added min-h for consistent description height */}
+                {description}
+              </p>
             </div>
             
-            <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
-              {description}
-            </p>
-            
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between mt-auto"> {/* Added mt-auto to push to bottom */}
               {/* Seller information is now directly available from the seller prop */}
               {seller && (
                 <div className="flex items-center space-x-2">
