@@ -3,7 +3,7 @@ export interface LocationData {
   id: string;
   lat: number;
   lng: number;
-  type: 'main' | 'delivery';
+  type: 'main' | 'delivery' | 'pickup';
   name?: string;
 }
 
@@ -15,9 +15,13 @@ export interface Listing {
   image: string;
   imageUrl: string; // Add imageUrl property for database compatibility
   sellerId: string;
+<<<<<<< HEAD
   userId?: string; // Optional fallback field for seller ID
   createdBy?: string; // Optional fallback field for seller ID
   category: string;
+=======
+  categories: string[]; // Changed to array of strings
+>>>>>>> 89b431092f6e9437c9f0b6a40210e6a75e273f8c
   condition: string;
   location: string; // Keep for backward compatibility
   locations?: LocationData[]; // New multi-location support
