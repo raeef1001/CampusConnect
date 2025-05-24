@@ -98,8 +98,18 @@ export async function analyzePriceForListing(
       }
     }
 
-    // Fallback: Use AI to suggest price based on description and category
-    return await getAIPriceSuggestion(title, category, condition, description);
+    // Prepare similar listings for AI suggestion
+    const aiSimilarListings = similarListings
+      .slice(0, 5) // Limit to a reasonable number for the AI prompt
+      .map(listing => ({
+        title: listing.title || 'Unknown',
+        price: listing.price || 0,
+        condition: listing.condition || 'Unknown',
+        daysAgo: Math.floor((new Date().getTime() - listing.createdAt.getTime()) / (1000 * 60 * 60 * 24))
+      }));
+
+    // Fallback: Use AI to suggest price based on description and category, and any limited similar listings found
+    return await getAIPriceSuggestion(title, category, condition, description, aiSimilarListings);
 
   } catch (error) {
     console.error('Error analyzing price:', error);
@@ -152,9 +162,23 @@ async function getAIPriceSuggestion(
   title: string,
   category: string,
   condition: string,
-  description: string
+  description: string,
+  similarListings: Array<{
+    title: string;
+    price: number;
+    condition: string;
+    daysAgo: number;
+  }>
 ): Promise<PriceAnalysis> {
   try {
+    let similarListingsInfo = '';
+    if (similarListings && similarListings.length > 0) {
+      similarListingsInfo = '\n\nHere are some similar listings from the marketplace:\n';
+      similarListings.forEach(listing => {
+        similarListingsInfo += `- Title: ${listing.title}, Price: $${listing.price}, Condition: ${listing.condition}\n`;
+      });
+    }
+
     const prompt = `
 As a pricing expert for a student marketplace, suggest a fair price for this item:
 
@@ -162,6 +186,7 @@ Title: ${title}
 Category: ${category}
 Condition: ${condition}
 Description: ${description}
+${similarListingsInfo}
 
 Please provide:
 1. A suggested price in USD

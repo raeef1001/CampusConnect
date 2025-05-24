@@ -1,8 +1,8 @@
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation, Outlet } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import Landing from "./pages/Landing";
@@ -18,11 +18,16 @@ import EditListing from "./pages/EditListing";
 import ListingDetails from "./pages/ListingDetails";
 import Admin from "./pages/Admin";
 import AdminSetup from "./pages/AdminSetup";
+<<<<<<< HEAD
 import CartPage from "./pages/Cart";
 import MyBidsPage from "./pages/MyBids";
 import ReceivedBidsPage from "./pages/ReceivedBids";
 import IncomingOrdersPage from "./pages/IncomingOrders";
 import OutgoingOrdersPage from "./pages/OutgoingOrders";
+=======
+import CartPage from "./pages/Cart"; // Import CartPage
+import ModerationPage from "./pages/ModerationPage"; // New import for moderation page
+>>>>>>> bb7217a54ab15460e12023f2cf354ab72a9bbc86
 import NotFound from "./pages/NotFound";
 import { auth } from "./lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
@@ -218,15 +223,22 @@ const AnimatedRoutes = ({ isAuthenticated }: AnimatedRoutesProps) => {
             {isAuthenticated ? <EditListing /> : <Navigate to="/auth" />}
           </motion.div>
         } />
+<<<<<<< HEAD
         <Route path="/cart" element={
           <motion.div
             key="cart-page"
+=======
+        <Route path="/admin" element={
+          <motion.div
+            key="admin"
+>>>>>>> bb7217a54ab15460e12023f2cf354ab72a9bbc86
             initial="initial"
             animate="in"
             exit="out"
             variants={pageVariants}
             transition={pageTransition}
           >
+<<<<<<< HEAD
             {isAuthenticated ? <CartPage /> : <Navigate to="/auth" />}
           </motion.div>
         } />
@@ -239,9 +251,13 @@ const AnimatedRoutes = ({ isAuthenticated }: AnimatedRoutesProps) => {
             variants={pageVariants}
             transition={pageTransition}
           >
+=======
+>>>>>>> bb7217a54ab15460e12023f2cf354ab72a9bbc86
             {isAuthenticated ? <Admin /> : <Navigate to="/auth" />}
           </motion.div>
-        } />
+        }>
+          <Route path="moderation" element={<ModerationPage />} />
+        </Route>
         <Route path="/admin-setup" element={
           <motion.div
             key="admin-setup"
@@ -254,15 +270,22 @@ const AnimatedRoutes = ({ isAuthenticated }: AnimatedRoutesProps) => {
             {isAuthenticated ? <AdminSetup /> : <Navigate to="/auth" />}
           </motion.div>
         } />
+<<<<<<< HEAD
         <Route path="/bids/my-bids" element={
           <motion.div
             key="my-bids"
+=======
+        <Route path="/cart" element={
+          <motion.div
+            key="cart-page"
+>>>>>>> bb7217a54ab15460e12023f2cf354ab72a9bbc86
             initial="initial"
             animate="in"
             exit="out"
             variants={pageVariants}
             transition={pageTransition}
           >
+<<<<<<< HEAD
             {isAuthenticated ? <MyBidsPage /> : <Navigate to="/auth" />}
           </motion.div>
         } />
@@ -300,6 +323,9 @@ const AnimatedRoutes = ({ isAuthenticated }: AnimatedRoutesProps) => {
             transition={pageTransition}
           >
             {isAuthenticated ? <IncomingOrdersPage /> : <Navigate to="/auth" />}
+=======
+            {isAuthenticated ? <CartPage /> : <Navigate to="/auth" />}
+>>>>>>> bb7217a54ab15460e12023f2cf354ab72a9bbc86
           </motion.div>
         } />
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

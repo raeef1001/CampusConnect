@@ -202,6 +202,7 @@ export function ListingCard({
         seconds: Math.floor(Date.now() / 1000),
         nanoseconds: 0,
       }, // Dummy createdAt for cart context
+      seller: seller, // Add the seller object
     }, 1); // Add 1 quantity by default
     toast({
       title: "Added to Cart",
