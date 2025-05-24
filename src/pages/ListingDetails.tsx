@@ -9,9 +9,19 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Heart, MessageSquare, MapPin, Star, ArrowLeft } from "lucide-react";
+import { Heart, MessageSquare, MapPin, Star, ArrowLeft, Truck, Navigation, Edit } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/components/ui/use-toast";
+import { reverseGeocode, getLocationName } from "@/utils/geocoding";
+import LocationDisplay from "@/components/LocationDisplay";
+
+interface LocationData {
+  id: string;
+  lat: number;
+  lng: number;
+  type: 'main' | 'delivery';
+  name?: string;
+}
 
 interface Listing {
   id: string;
@@ -23,6 +33,8 @@ interface Listing {
   imageUrl: string;
   userId: string;
   userEmail: string;
+  locations?: LocationData[];
+  deliveryRadius?: number;
   createdAt: {
     seconds: number;
     nanoseconds: number;
@@ -322,6 +334,22 @@ export default function ListingDetails() {
                 {listing.description}
               </p>
 
+              {/* Location and Delivery Information */}
+              {listing.locations && listing.locations.length > 0 && (
+                <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <MapPin className="h-5 w-5 text-blue-600" />
+                    Location & Delivery Information
+                  </h3>
+                  
+                  <LocationDisplay 
+                    locations={listing.locations}
+                    deliveryRadius={listing.deliveryRadius}
+                    showFullAddress={true}
+                  />
+                </div>
+              )}
+
               <div className="flex items-center justify-between border-t border-b py-4 mb-6">
                 {loadingSeller ? (
                   <div className="flex items-center space-x-3">
@@ -363,10 +391,28 @@ export default function ListingDetails() {
                 )}
               </div>
 
-              <Button variant="primary-warm" className="w-full gap-2 text-lg py-6" onClick={handleContactSeller}>
-                <MessageSquare className="h-5 w-5" />
-                Contact Seller
-              </Button>
+              {/* Action Buttons */}
+              <div className="space-y-3">
+                {/* Edit button - only show for listing owner */}
+                {auth.currentUser && listing.userId === auth.currentUser.uid && (
+                  <Button 
+                    variant="outline" 
+                    className="w-full gap-2 text-lg py-6 border-blue-600 text-blue-600 hover:bg-blue-50" 
+                    onClick={() => navigate(`/listings/${id}/edit`)}
+                  >
+                    <Edit className="h-5 w-5" />
+                    Edit Listing
+                  </Button>
+                )}
+                
+                {/* Contact button - hide for listing owner */}
+                {(!auth.currentUser || listing.userId !== auth.currentUser.uid) && (
+                  <Button variant="primary-warm" className="w-full gap-2 text-lg py-6" onClick={handleContactSeller}>
+                    <MessageSquare className="h-5 w-5" />
+                    Contact Seller
+                  </Button>
+                )}
+              </div>
             </div>
           </main>
         </div>
