@@ -6,11 +6,16 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input"; // Added for edit form
+import { Label } from "@/components/ui/label"; // Added for edit form
+import { Textarea } from "@/components/ui/textarea"; // Added for edit form
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog"; // Added for edit profile dialog
 import { Edit, Mail, Phone, MapPin } from "lucide-react";
 import { auth, db } from "@/lib/firebase"; // Import auth and db
-import { doc, getDoc } from "firebase/firestore"; // Import firestore functions
+import { doc, getDoc, updateDoc, setDoc } from "firebase/firestore"; // Import firestore functions, added updateDoc and setDoc
 import { onAuthStateChanged } from "firebase/auth"; // Import onAuthStateChanged
 import { Skeleton } from "@/components/ui/skeleton"; // Import Skeleton
+import { useToast } from '@/components/ui/use-toast'; // Import useToast
 
 interface UserProfile {
   uid: string;
@@ -35,6 +40,15 @@ export default function Profile() {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false); // State for dialog visibility
+  const [editName, setEditName] = useState('');
+  const [editUniversity, setEditUniversity] = useState('');
+  const [editMajor, setEditMajor] = useState('');
+  const [editBio, setEditBio] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [editLocation, setEditLocation] = useState('');
+
+  const { toast } = useToast();
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
@@ -44,18 +58,34 @@ export default function Profile() {
           const userDocSnap = await getDoc(userDocRef);
 
           if (userDocSnap.exists()) {
-            setUserProfile({ uid: user.uid, ...userDocSnap.data() } as UserProfile);
+            const data = { uid: user.uid, ...userDocSnap.data() } as UserProfile;
+            setUserProfile(data);
+            // Initialize edit form states
+            setEditName(data.name || '');
+            setEditUniversity(data.university || '');
+            setEditMajor(data.major || '');
+            setEditBio(data.bio || '');
+            setEditPhone(data.contact?.phone || '');
+            setEditLocation(data.contact?.location || '');
           } else {
-            // If user profile doesn't exist, create a basic one
-            setUserProfile({
-              uid: user.uid,
+            // If user profile doesn't exist, create a basic one in Firestore
+            const newProfileData = {
               name: user.displayName || "New User",
               email: user.email || "N/A",
               university: "Not specified",
               avatar: user.photoURL || "/placeholder.svg",
-            });
-            // You might want to add this new user to the 'users' collection here
-            // For now, we'll just display it.
+              // Add other default fields as necessary
+            };
+            await setDoc(userDocRef, newProfileData, { merge: true }); // Create or merge
+            const data = { uid: user.uid, ...newProfileData } as UserProfile;
+            setUserProfile(data);
+            // Initialize edit form states for new profile
+            setEditName(data.name);
+            setEditUniversity(data.university);
+            setEditMajor('');
+            setEditBio('');
+            setEditPhone('');
+            setEditLocation('');
           }
         } catch (err) {
           console.error("Error fetching user profile:", err);
@@ -72,6 +102,52 @@ export default function Profile() {
 
     return () => unsubscribeAuth();
   }, []);
+
+  const handleSaveProfile = async () => {
+    if (!auth.currentUser) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to edit your profile.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const userDocRef = doc(db, "users", auth.currentUser.uid);
+      const updatedData = {
+        name: editName,
+        university: editUniversity,
+        major: editMajor,
+        bio: editBio,
+        contact: {
+          email: auth.currentUser.email, // Keep current user email
+          phone: editPhone,
+          location: editLocation,
+        },
+      };
+      await updateDoc(userDocRef, updatedData);
+
+      // Update local state to reflect changes
+      setUserProfile(prev => prev ? { ...prev, ...updatedData, contact: { ...prev.contact, ...updatedData.contact } } : null);
+
+      toast({
+        title: "Success",
+        description: "Profile updated successfully!",
+      });
+      setIsEditDialogOpen(false); // Close dialog on success
+    } catch (err) {
+      console.error("Error updating profile:", err);
+      toast({
+        title: "Error",
+        description: "Failed to update profile. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -150,10 +226,53 @@ export default function Profile() {
             <div className="max-w-4xl mx-auto">
               <div className="flex items-center justify-between mb-8">
                 <h1 className="text-3xl font-bold">My Profile</h1>
-                <Button variant="outline">
-                  <Edit className="h-4 w-4 mr-2" />
-                  Edit Profile
-                </Button>
+                <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline">
+                      <Edit className="h-4 w-4 mr-2" />
+                      Edit Profile
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-lg w-full fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 p-6 border bg-background shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg md:w-full">
+                    <DialogHeader>
+                      <DialogTitle>Edit Profile</DialogTitle>
+                      <DialogDescription>
+                        Make changes to your profile here. Click save when you're done.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="name">Name</Label>
+                        <Input id="name" value={editName} onChange={(e) => setEditName(e.target.value)} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="university">University</Label>
+                        <Input id="university" value={editUniversity} onChange={(e) => setEditUniversity(e.target.value)} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="major">Major (Optional)</Label>
+                        <Input id="major" value={editMajor} onChange={(e) => setEditMajor(e.target.value)} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="bio">Bio (Optional)</Label>
+                        <Textarea id="bio" value={editBio} onChange={(e) => setEditBio(e.target.value)} rows={3} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="phone">Phone (Optional)</Label>
+                        <Input id="phone" value={editPhone} onChange={(e) => setEditPhone(e.target.value)} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="location">Location (Optional)</Label>
+                        <Input id="location" value={editLocation} onChange={(e) => setEditLocation(e.target.value)} />
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button type="submit" onClick={handleSaveProfile} disabled={loading}>
+                        {loading ? "Saving..." : "Save changes"}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
               </div>
 
               <Card className="mb-8">
