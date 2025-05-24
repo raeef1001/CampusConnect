@@ -152,7 +152,7 @@ export default function CreateListing() {
         category,
         condition,
         imageUrl, // Use the uploaded image URL
-        userId: user.uid, // Keep userId at top level for easy querying
+        sellerId: user.uid, // Use sellerId to match Listing interface
         userEmail: user.email, // Keep userEmail at top level
         seller: sellerProfile, // Add the complete seller profile
         createdAt: serverTimestamp(),
