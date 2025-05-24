@@ -80,6 +80,12 @@ export default function Auth() {
       return;
     }
 
+    if (!signupEmail.endsWith(".edu")) {
+      toast.error("Only university emails (.edu) are allowed for signup.");
+      setIsLoading(false);
+      return;
+    }
+
     try {
       await signup(signupEmail, signupPassword);
       toast.success("Account created successfully!");
