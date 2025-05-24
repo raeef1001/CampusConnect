@@ -35,6 +35,8 @@ interface Listing {
   userEmail: string;
   locations?: LocationData[];
   deliveryRadius?: number;
+  isAvailable?: boolean;
+  availabilityStatus?: 'available' | 'sold' | 'reserved' | 'unavailable';
   createdAt: {
     seconds: number;
     nanoseconds: number;
@@ -314,7 +316,35 @@ export default function ListingDetails() {
               </div>
 
               <div className="flex items-start justify-between mb-4">
-                <h1 className="text-4xl font-bold text-gray-900">{listing.title}</h1>
+                <div className="flex-1">
+                  <h1 className="text-4xl font-bold text-gray-900 mb-2">{listing.title}</h1>
+                  {/* Availability Status Display */}
+                  <div className="flex items-center gap-3">
+                    {listing.isAvailable !== false && listing.availabilityStatus === 'available' ? (
+                      <Badge className="bg-green-100 text-green-800 border-green-300 text-base px-3 py-1">
+                        ✅ Available
+                      </Badge>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        {listing.availabilityStatus === 'sold' && (
+                          <Badge className="bg-red-100 text-red-800 border-red-300 text-base px-3 py-1">
+                            ❌ SOLD
+                          </Badge>
+                        )}
+                        {listing.availabilityStatus === 'reserved' && (
+                          <Badge className="bg-yellow-100 text-yellow-800 border-yellow-300 text-base px-3 py-1">
+                            ⏳ RESERVED
+                          </Badge>
+                        )}
+                        {listing.availabilityStatus === 'unavailable' && (
+                          <Badge className="bg-gray-100 text-gray-800 border-gray-300 text-base px-3 py-1">
+                            🚫 UNAVAILABLE
+                          </Badge>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
                 <div className="text-right">
                   <p className="font-bold text-3xl text-primary-warm">
                     {isService ? `${listing.price}/hr` : `$${listing.price.toFixed(2)}`}
@@ -405,12 +435,34 @@ export default function ListingDetails() {
                   </Button>
                 )}
                 
-                {/* Contact button - hide for listing owner */}
+                {/* Contact button - hide for listing owner and adjust based on availability */}
                 {(!auth.currentUser || listing.userId !== auth.currentUser.uid) && (
-                  <Button variant="primary-warm" className="w-full gap-2 text-lg py-6" onClick={handleContactSeller}>
-                    <MessageSquare className="h-5 w-5" />
-                    Contact Seller
-                  </Button>
+                  <div className="space-y-2">
+                    {listing.isAvailable !== false && listing.availabilityStatus === 'available' ? (
+                      <Button variant="primary-warm" className="w-full gap-2 text-lg py-6" onClick={handleContactSeller}>
+                        <MessageSquare className="h-5 w-5" />
+                        Contact Seller
+                      </Button>
+                    ) : (
+                      <div className="space-y-2">
+                        <Button 
+                          variant="outline" 
+                          className="w-full gap-2 text-lg py-6 cursor-not-allowed opacity-60" 
+                          disabled
+                        >
+                          <MessageSquare className="h-5 w-5" />
+                          {listing.availabilityStatus === 'sold' && 'Item Sold - Contact Unavailable'}
+                          {listing.availabilityStatus === 'reserved' && 'Item Reserved - Contact Unavailable'}
+                          {listing.availabilityStatus === 'unavailable' && 'Item Unavailable - Contact Unavailable'}
+                        </Button>
+                        <p className="text-sm text-center text-gray-600">
+                          {listing.availabilityStatus === 'sold' && 'This item has been sold and is no longer available.'}
+                          {listing.availabilityStatus === 'reserved' && 'This item is currently reserved for another buyer.'}
+                          {listing.availabilityStatus === 'unavailable' && 'This item is temporarily unavailable.'}
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
             </div>
