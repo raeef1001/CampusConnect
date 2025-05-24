@@ -4,7 +4,7 @@ import { Navbar } from "@/components/layout/Navbar";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { FloatingChat } from "@/components/ui/floating-chat";
 import { db } from '@/lib/firebase';
-import { collection, query, orderBy, where, onSnapshot, Timestamp, doc, getDoc, getDocs, Query, limit, startAfter, QueryDocumentSnapshot } from 'firebase/firestore';
+import { collection, query, orderBy, where, onSnapshot, Timestamp, doc, getDoc, getDocs, Query, limit, startAfter, QueryDocumentSnapshot, documentId } from 'firebase/firestore';
 import { ListingCard } from "@/components/marketplace/ListingCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getUser } from "@/utils/auth";
@@ -197,7 +197,7 @@ export default function Listings() {
 
             for (let i = 0; i < bookmarkedListingIds.length; i += batchSize) {
               const batchIds = bookmarkedListingIds.slice(i, i + batchSize);
-              const listingsBatchQuery = query(collection(db, "listings"), where("id", "in", batchIds));
+              const listingsBatchQuery = query(collection(db, "listings"), where(documentId(), "in", batchIds));
               listingBatches.push(
                 getDocs(listingsBatchQuery).then(async (snapshot) => {
                   const batchListings: Listing[] = [];

@@ -25,10 +25,7 @@ export interface Listing {
   userId?: string; // Optional fallback field for seller ID
   createdBy?: string; // Optional fallback field for seller ID
   category: string;
-<<<<<<< HEAD
-=======
-  categories: string[]; // Changed to array of strings
->>>>>>> bb7217a54ab15460e12023f2cf354ab72a9bbc86
+  categories?: string[]; // Keep both, make categories optional
   condition: string;
   location: string; // Keep for backward compatibility
   locations?: LocationData[]; // New multi-location support
