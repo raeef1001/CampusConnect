@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Edit, Mail, Phone, MapPin } from "lucide-react";
 import LocationPickerMap from "@/components/LocationPickerMap"; // Import the new map component
 import { auth, db } from "@/lib/firebase"; // Import auth and db
-import { doc, getDoc, updateDoc, setDoc } from "firebase/firestore"; // Import firestore functions, added updateDoc and setDoc
+import { doc, getDoc, updateDoc, setDoc, collection, query, where, getDocs } from "firebase/firestore"; // Import firestore functions, added updateDoc and setDoc, and collection, query, where, getDocs
 import { onAuthStateChanged } from "firebase/auth"; // Import onAuthStateChanged
 import { Skeleton } from "@/components/ui/skeleton"; // Import Skeleton
 import { useToast } from '@/components/ui/use-toast'; // Import useToast
@@ -77,25 +77,10 @@ export default function Profile() {
           const userDocRef = doc(db, "users", user.uid);
           const userDocSnap = await getDoc(userDocRef);
 
-          if (userDocSnap.exists()) {
-            const data = { uid: user.uid, ...userDocSnap.data() } as UserProfile;
-            setUserProfile(data);
-            // Initialize edit form states
-            setEditName(data.name || '');
-            setEditUniversity(data.university || '');
-            setEditMajor(data.major || '');
-            setEditBio(data.bio || '');
-            setEditPhone(data.contact?.phone || '');
-            setEditLocation(data.contact?.location || '');
+          let profileData: UserProfile;
 
-            // Set display location if coordinates exist
-            if (data.contact?.location) {
-              const [lat, lng] = data.contact.location.split(',').map(Number);
-              if (!isNaN(lat) && !isNaN(lng)) {
-                const placeName = await getPlaceName(lat, lng);
-                setDisplayLocation(placeName);
-              }
-            }
+          if (userDocSnap.exists()) {
+            profileData = { uid: user.uid, ...userDocSnap.data() } as UserProfile;
           } else {
             // If user profile doesn't exist, create a basic one in Firestore
             const newProfileData = {
@@ -103,19 +88,49 @@ export default function Profile() {
               email: user.email || "N/A",
               university: "Not specified",
               avatar: user.photoURL || "/placeholder.svg",
-              // Add other default fields as necessary
+              listingsCount: 0,
+              reviewsCount: 0,
+              rating: 0,
             };
             await setDoc(userDocRef, newProfileData, { merge: true }); // Create or merge
-            const data = { uid: user.uid, ...newProfileData } as UserProfile;
-            setUserProfile(data);
-            // Initialize edit form states for new profile
-            setEditName(data.name);
-            setEditUniversity(data.university);
-            setEditMajor('');
-            setEditBio('');
-            setEditPhone('');
-            setEditLocation('');
-            setDisplayLocation('');
+            profileData = { uid: user.uid, ...newProfileData } as UserProfile;
+          }
+
+          // Fetch listings count
+          const listingsRef = collection(db, "listings");
+          const qListings = query(listingsRef, where("ownerId", "==", user.uid));
+          const listingsSnapshot = await getDocs(qListings);
+          profileData.listingsCount = listingsSnapshot.size;
+
+          // Fetch reviews count and calculate rating
+          const reviewsRef = collection(db, "reviews");
+          const qReviews = query(reviewsRef, where("reviewedUserId", "==", user.uid));
+          const reviewsSnapshot = await getDocs(qReviews);
+          profileData.reviewsCount = reviewsSnapshot.size;
+
+          let totalRating = 0;
+          reviewsSnapshot.forEach((doc) => {
+            totalRating += doc.data().rating;
+          });
+          profileData.rating = reviewsSnapshot.size > 0 ? parseFloat((totalRating / reviewsSnapshot.size).toFixed(1)) : 0;
+
+          setUserProfile(profileData);
+
+          // Initialize edit form states
+          setEditName(profileData.name || '');
+          setEditUniversity(profileData.university || '');
+          setEditMajor(profileData.major || '');
+          setEditBio(profileData.bio || '');
+          setEditPhone(profileData.contact?.phone || '');
+          setEditLocation(profileData.contact?.location || '');
+
+          // Set display location if coordinates exist
+          if (profileData.contact?.location) {
+            const [lat, lng] = profileData.contact.location.split(',').map(Number);
+            if (!isNaN(lat) && !isNaN(lng)) {
+              const placeName = await getPlaceName(lat, lng);
+              setDisplayLocation(placeName);
+            }
           }
         } catch (err) {
           console.error("Error fetching user profile:", err);
@@ -322,7 +337,7 @@ export default function Profile() {
                       Edit Profile
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="sm:max-w-2xl w-full p-6 border bg-background shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg md:w-full">
+                  <DialogContent className="sm:max-w-2xl w-full p-6 border bg-background shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg md:w-full pointer-events-auto h-[75vh] overflow-scroll">
                     <DialogHeader>
                       <DialogTitle>Edit Profile</DialogTitle>
                       <DialogDescription>
