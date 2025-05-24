@@ -14,7 +14,8 @@ import Notifications from "./pages/Notifications";
 import Messages from "./pages/Messages";
 import Profile from "./pages/Profile";
 import Settings from "./pages/Settings";
-import CreateListing from "./pages/CreateListing"; // Import the new page
+import CreateListing from "./pages/CreateListing";
+import ListingDetails from "./pages/ListingDetails"; // Import the new page
 import NotFound from "./pages/NotFound";
 import { auth } from "./lib/firebase"; // Import Firebase auth
 import { onAuthStateChanged } from "firebase/auth"; // Import onAuthStateChanged
@@ -43,7 +44,7 @@ const App = () => {
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <BrowserRouter>
+        <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <AnimatedRoutes isAuthenticated={isAuthenticated} />
         </BrowserRouter>
       </TooltipProvider>
@@ -181,6 +182,18 @@ const AnimatedRoutes = ({ isAuthenticated }: AnimatedRoutesProps) => {
             transition={pageTransition}
           >
             {isAuthenticated ? <CreateListing /> : <Navigate to="/auth" />}
+          </motion.div>
+        } />
+        <Route path="/listings/:id" element={
+          <motion.div
+            key="listing-details"
+            initial="initial"
+            animate="in"
+            exit="out"
+            variants={pageVariants}
+            transition={pageTransition}
+          >
+            {isAuthenticated ? <ListingDetails /> : <Navigate to="/auth" />}
           </motion.div>
         } />
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

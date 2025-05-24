@@ -10,6 +10,10 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { FloatingChat } from "@/components/ui/floating-chat";
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft } from 'lucide-react';
+import { db, auth, storage } from '@/lib/firebase'; // Import storage
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'; // Import storage functions
+import { useToast } from '@/components/ui/use-toast';
 
 export default function CreateListing() {
   const navigate = useNavigate();
@@ -19,14 +23,73 @@ export default function CreateListing() {
   const [price, setPrice] = useState('');
   const [category, setCategory] = useState('');
   const [condition, setCondition] = useState('');
-  const [image, setImage] = useState(''); // For simplicity, using a URL string
+  const [imageFile, setImageFile] = useState<File | null>(null); // For file upload
+  const [uploading, setUploading] = useState(false); // Loading state for upload
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const { toast } = useToast();
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // In a real application, you would send this data to a backend API
-    console.log({ title, description, price, category, condition, image });
-    alert('Listing created successfully! (Demo)');
-    navigate('/dashboard'); // Redirect to dashboard after creation
+
+    if (!auth.currentUser) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to create a listing.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setUploading(true); // Start uploading state
+    let imageUrl = "";
+
+    if (imageFile) {
+      try {
+        const storageRef = ref(storage, `listing_images/${auth.currentUser.uid}/${imageFile.name}`);
+        const uploadResult = await uploadBytes(storageRef, imageFile);
+        imageUrl = await getDownloadURL(uploadResult.ref);
+      } catch (error) {
+        console.error("Error uploading image: ", error);
+        toast({
+          title: "Error",
+          description: "Failed to upload image. Please try again.",
+          variant: "destructive",
+        });
+        setUploading(false);
+        return;
+      }
+    } else {
+      imageUrl = "/placeholder.svg"; // Use placeholder if no image is selected
+    }
+
+    try {
+      await addDoc(collection(db, "listings"), {
+        title,
+        description,
+        price: parseFloat(price), // Convert price to a number
+        category,
+        condition,
+        imageUrl, // Use the uploaded image URL
+        userId: auth.currentUser.uid,
+        userEmail: auth.currentUser.email,
+        createdAt: serverTimestamp(),
+      });
+
+      toast({
+        title: "Success",
+        description: "Listing created successfully!",
+      });
+      navigate('/dashboard'); // Redirect to dashboard after creation
+    } catch (error) {
+      console.error("Error creating listing: ", error);
+      toast({
+        title: "Error",
+        description: "Failed to create listing. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setUploading(false); // End uploading state
+    }
   };
 
   return (
@@ -125,18 +188,18 @@ export default function CreateListing() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="image">Image URL (for demo)</Label>
+                      <Label htmlFor="image">Listing Image</Label>
                       <Input 
                         id="image" 
-                        placeholder="e.g., https://example.com/image.jpg" 
-                        value={image}
-                        onChange={(e) => setImage(e.target.value)}
+                        type="file" 
+                        accept="image/*"
+                        onChange={(e) => setImageFile(e.target.files ? e.target.files[0] : null)}
                       />
-                      <p className="text-sm text-gray-500">In a real app, this would be an image upload.</p>
+                      {imageFile && <p className="text-sm text-muted-foreground">Selected: {imageFile.name}</p>}
                     </div>
 
-                    <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700">
-                      Create Listing
+                    <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700" disabled={uploading}>
+                      {uploading ? "Uploading Image..." : "Create Listing"}
                     </Button>
                   </form>
                 </CardContent>

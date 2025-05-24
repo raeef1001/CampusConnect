@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Navbar } from "@/components/layout/Navbar";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { FloatingChat } from "@/components/ui/floating-chat";
@@ -7,27 +7,133 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Edit, Mail, Phone, MapPin } from "lucide-react";
+import { auth, db } from "@/lib/firebase"; // Import auth and db
+import { doc, getDoc } from "firebase/firestore"; // Import firestore functions
+import { onAuthStateChanged } from "firebase/auth"; // Import onAuthStateChanged
+import { Skeleton } from "@/components/ui/skeleton"; // Import Skeleton
+
+interface UserProfile {
+  uid: string;
+  name: string;
+  email: string;
+  university: string;
+  major?: string;
+  bio?: string;
+  avatar?: string;
+  contact?: {
+    email?: string;
+    phone?: string;
+    location?: string;
+  };
+  listingsCount?: number;
+  reviewsCount?: number;
+  rating?: number;
+}
 
 export default function Profile() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Mock user data
-  const user = {
-    name: "John Doe",
-    email: "john@iut-dhaka.edu",
-    university: "IUT Dhaka",
-    major: "Computer Science",
-    bio: "Student passionate about technology and community building. Looking to connect with fellow students!",
-    avatar: "/placeholder.svg",
-    contact: {
-      email: "john.doe@example.com",
-      phone: "+880 123 456 789",
-      location: "Dhaka, Bangladesh",
-    },
-    listingsCount: 5,
-    reviewsCount: 12,
-    rating: 4.8,
-  };
+  useEffect(() => {
+    const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        try {
+          const userDocRef = doc(db, "users", user.uid);
+          const userDocSnap = await getDoc(userDocRef);
+
+          if (userDocSnap.exists()) {
+            setUserProfile({ uid: user.uid, ...userDocSnap.data() } as UserProfile);
+          } else {
+            // If user profile doesn't exist, create a basic one
+            setUserProfile({
+              uid: user.uid,
+              name: user.displayName || "New User",
+              email: user.email || "N/A",
+              university: "Not specified",
+              avatar: user.photoURL || "/placeholder.svg",
+            });
+            // You might want to add this new user to the 'users' collection here
+            // For now, we'll just display it.
+          }
+        } catch (err) {
+          console.error("Error fetching user profile:", err);
+          setError("Failed to load profile.");
+        } finally {
+          setLoading(false);
+        }
+      } else {
+        setUserProfile(null);
+        setLoading(false);
+        setError("Please log in to view your profile.");
+      }
+    });
+
+    return () => unsubscribeAuth();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col">
+        <Navbar isAuthenticated={true} />
+        <div className="flex flex-1">
+          <Sidebar isCollapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} />
+          <main className="flex-1 p-6 overflow-auto">
+            <div className="max-w-4xl mx-auto">
+              <Skeleton className="h-8 w-48 mb-8" />
+              <Card className="mb-8">
+                <CardContent className="flex flex-col md:flex-row items-center md:items-start p-6">
+                  <Skeleton className="h-24 w-24 md:h-32 md:w-32 mb-4 md:mb-0 md:mr-8 rounded-full" />
+                  <div className="text-center md:text-left flex-1">
+                    <Skeleton className="h-6 w-48 mb-2" />
+                    <Skeleton className="h-4 w-64 mb-4" />
+                    <div className="flex items-center justify-center md:justify-start gap-2 mt-2">
+                      <Skeleton className="h-6 w-24" />
+                      <Skeleton className="h-6 w-24" />
+                      <Skeleton className="h-6 w-24" />
+                    </div>
+                    <Skeleton className="h-20 w-full mt-4" />
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <Skeleton className="h-6 w-48" />
+                  <Skeleton className="h-4 w-64" />
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-full" />
+                </CardContent>
+              </Card>
+            </div>
+          </main>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col">
+        <Navbar isAuthenticated={true} />
+        <div className="flex flex-1">
+          <Sidebar isCollapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} />
+          <main className="flex-1 p-6 overflow-auto">
+            <div className="max-w-4xl mx-auto bg-white p-8 rounded-lg shadow-md text-center text-red-600">
+              <p>{error}</p>
+            </div>
+          </main>
+        </div>
+      </div>
+    );
+  }
+
+  if (!userProfile) {
+    return null; // Should not happen if error is handled
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -53,18 +159,18 @@ export default function Profile() {
               <Card className="mb-8">
                 <CardContent className="flex flex-col md:flex-row items-center md:items-start p-6">
                   <Avatar className="h-24 w-24 md:h-32 md:w-32 mb-4 md:mb-0 md:mr-8">
-                    <AvatarImage src={user.avatar} alt={user.name} />
-                    <AvatarFallback>{user.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                    <AvatarImage src={userProfile.avatar || "/placeholder.svg"} alt={userProfile.name} />
+                    <AvatarFallback>{userProfile.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
                   </Avatar>
                   <div className="text-center md:text-left flex-1">
-                    <h2 className="text-2xl font-semibold">{user.name}</h2>
-                    <p className="text-gray-600">{user.university} - {user.major}</p>
+                    <h2 className="text-2xl font-semibold">{userProfile.name}</h2>
+                    <p className="text-gray-600">{userProfile.university} {userProfile.major && `- ${userProfile.major}`}</p>
                     <div className="flex items-center justify-center md:justify-start gap-2 mt-2">
-                      <Badge variant="secondary">Listings: {user.listingsCount}</Badge>
-                      <Badge variant="secondary">Reviews: {user.reviewsCount}</Badge>
-                      <Badge variant="secondary">Rating: {user.rating}</Badge>
+                      <Badge variant="secondary">Listings: {userProfile.listingsCount || 0}</Badge>
+                      <Badge variant="secondary">Reviews: {userProfile.reviewsCount || 0}</Badge>
+                      <Badge variant="secondary">Rating: {userProfile.rating || 0}</Badge>
                     </div>
-                    <p className="text-gray-700 mt-4 max-w-prose">{user.bio}</p>
+                    <p className="text-gray-700 mt-4 max-w-prose">{userProfile.bio || "No bio provided."}</p>
                   </div>
                 </CardContent>
               </Card>
@@ -77,15 +183,15 @@ export default function Profile() {
                 <CardContent className="space-y-4">
                   <div className="flex items-center">
                     <Mail className="h-5 w-5 text-gray-600 mr-3" />
-                    <p>{user.contact.email}</p>
+                    <p>{userProfile.contact?.email || userProfile.email}</p>
                   </div>
                   <div className="flex items-center">
                     <Phone className="h-5 w-5 text-gray-600 mr-3" />
-                    <p>{user.contact.phone}</p>
+                    <p>{userProfile.contact?.phone || "N/A"}</p>
                   </div>
                   <div className="flex items-center">
                     <MapPin className="h-5 w-5 text-gray-600 mr-3" />
-                    <p>{user.contact.location}</p>
+                    <p>{userProfile.contact?.location || "N/A"}</p>
                   </div>
                 </CardContent>
               </Card>
