@@ -61,6 +61,7 @@ export default function Messages() {
   const [userProfiles, setUserProfiles] = useState<{ [key: string]: UserProfile }>({});
   const [fetchedListings, setFetchedListings] = useState<{ [key: string]: Listing }>({});
   const [isListingSelectorOpen, setIsListingSelectorOpen] = useState(false);
+  const [shouldSendMessage, setShouldSendMessage] = useState(false); // Added
 
   const { toast } = useToast();
 
@@ -68,6 +69,7 @@ export default function Messages() {
   const { chatId } = useParams<{ chatId: string }>();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const initialMessageRef = useRef<string | null>(null); // Added
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -132,12 +134,47 @@ export default function Messages() {
           fetchedChats.forEach(chat => chat.participants.forEach(uid => allParticipantUids.add(uid)));
           await fetchUserProfiles(Array.from(allParticipantUids));
 
-          const { sellerId, listingId: initialListingId } = location.state || {};
+          const { sellerId, listingId: initialListingId, initialMessage } = location.state || {};
           let chatToSelect: Chat | null = null;
+          
+          // Store initial message in ref if present and not already set
+          if (initialMessage && initialMessageRef.current === null) {
+            initialMessageRef.current = initialMessage;
+            setNewMessage(initialMessage); // Set newMessage immediately
+          }
+          window.history.replaceState({}, document.title); // Clear state immediately
 
           if (chatId) {
             chatToSelect = fetchedChats.find(c => c.id === chatId) || null;
           } else if (sellerId && initialListingId && user.uid !== sellerId) {
+            // Fetch the listing details if initialListingId is present
+            if (initialListingId) {
+              try {
+                const listingDocRef = doc(db, "listings", initialListingId);
+                const listingDocSnap = await getDoc(listingDocRef);
+                if (listingDocSnap.exists()) {
+                  const listingData = listingDocSnap.data();
+                  // Construct a minimal Listing object for selectedListing state
+                  setSelectedListing({
+                    id: listingDocSnap.id,
+                    title: listingData.title,
+                    description: listingData.description,
+                    price: String(listingData.price),
+                    imageUrl: listingData.imageUrl,
+                    sellerId: listingData.sellerId || listingData.userId,
+                    category: listingData.category,
+                    condition: listingData.condition,
+                    location: listingData.location,
+                    createdAt: listingData.createdAt,
+                    updatedAt: listingData.updatedAt,
+                    seller: listingData.seller // Assuming seller object is directly available or can be fetched
+                  } as Listing);
+                }
+              } catch (error) {
+                console.error("Error fetching initial listing for chat:", error);
+              }
+            }
+
             const existingChat = fetchedChats.find(c =>
               c.participants.includes(sellerId) && c.participants.includes(user.uid)
             );
@@ -164,7 +201,10 @@ export default function Messages() {
                 return isExisting ? prev : [chatToSelect!, ...prev];
               });
             }
-            window.history.replaceState({}, document.title);
+            // Set shouldSendMessage to true if initialMessage was present
+            if (initialMessage) {
+              setShouldSendMessage(true);
+            }
           }
 
           if (chatToSelect) {
@@ -190,7 +230,18 @@ export default function Messages() {
       }
     });
     return () => unsubscribeAuth();
-  }, [location.state, chatId]); 
+  }, [location.state, chatId]);
+
+  // Modified useEffect to trigger message sending
+  useEffect(() => {
+    if (selectedChat && currentUser && initialMessageRef.current) {
+      // Ensure newMessage is still the initial message before sending
+      if (newMessage === initialMessageRef.current) {
+        handleSendMessage();
+      }
+      initialMessageRef.current = null; // Clear the ref after sending
+    }
+  }, [selectedChat, currentUser, newMessage]);
 
 
   useEffect(() => {
