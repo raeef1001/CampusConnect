@@ -41,7 +41,7 @@ export function ListingCard({
     <Card 
       className={cn(
         "group transition-all duration-300 cursor-pointer overflow-hidden",
-        isHovered ? "shadow-lg scale-[1.02] border-blue-100" : "shadow-sm hover:shadow-md"
+        isHovered ? "shadow-lg scale-[1.02] border-primary-warm" : "shadow-sm hover:shadow-md"
       )}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -61,8 +61,8 @@ export function ListingCard({
           <Button
             variant="ghost"
             size="icon"
-            className={`absolute top-3 right-3 h-8 w-8 rounded-full bg-white/90 backdrop-blur-sm hover:bg-white/95 shadow-sm ${
-              isFavorited ? "text-red-500" : "text-gray-600"
+            className={`absolute top-3 right-3 h-8 w-8 rounded-full bg-background/90 backdrop-blur-sm hover:bg-background/95 shadow-sm ${
+              isFavorited ? "text-warm-500" : "text-muted-foreground"
             }`}
             onClick={(e) => {
               e.stopPropagation();
@@ -72,7 +72,7 @@ export function ListingCard({
             <Heart className={`h-4 w-4 ${isFavorited ? "fill-current" : ""}`} />
           </Button>
           <div className="absolute top-3 left-3">
-            <Badge variant="secondary" className="bg-white/90 backdrop-blur-sm font-medium">
+            <Badge variant="secondary" className="bg-background/90 backdrop-blur-sm font-medium">
               {category}
             </Badge>
           </div>
@@ -81,7 +81,7 @@ export function ListingCard({
               "absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent",
               "flex items-end justify-center pb-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
             )}>
-              <Button variant="secondary" size="sm" className="bg-white/90 backdrop-blur-sm gap-1">
+              <Button variant="secondary" size="sm" className="bg-background/90 backdrop-blur-sm gap-1">
                 <ExternalLink className="h-3.5 w-3.5" />
                 View Details
               </Button>
@@ -91,17 +91,17 @@ export function ListingCard({
         
         <div className="p-4">
           <div className="flex items-start justify-between mb-2">
-            <h3 className="font-semibold text-lg line-clamp-1 group-hover:text-blue-600 transition-colors">
+            <h3 className="font-semibold text-lg line-clamp-1 group-hover:text-primary-warm transition-colors">
               {title}
             </h3>
             <div className="text-right">
-              <p className="font-bold text-lg text-blue-600">
+              <p className="font-bold text-lg text-primary-warm">
                 {isService ? `${price}/hr` : price}
               </p>
               {!isService && (
                 <Badge variant={condition === "New" ? "default" : "outline"} className={cn(
                   "text-xs",
-                  condition === "New" && "bg-emerald-500"
+                  condition === "New" && "bg-warm-500"
                 )}>
                   {condition}
                 </Badge>
@@ -109,37 +109,37 @@ export function ListingCard({
             </div>
           </div>
           
-          <p className="text-sm text-gray-600 line-clamp-2 mb-3">
+          <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
             {description}
           </p>
           
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
-              <Avatar className="h-7 w-7 border-2 border-white shadow-sm">
+              <Avatar className="h-7 w-7 border-2 border-background shadow-sm">
                 <AvatarImage src={seller.avatar} />
-                <AvatarFallback className="text-xs bg-blue-100 text-blue-800">
+                <AvatarFallback className="text-xs bg-warm-100 text-warm-800">
                   {seller.name.split(' ').map(n => n[0]).join('')}
                 </AvatarFallback>
               </Avatar>
               <div>
                 <p className="text-sm font-medium">{seller.name}</p>
                 <div className="flex items-center space-x-1">
-                  <MapPin className="h-3 w-3 text-gray-400" />
-                  <p className="text-xs text-gray-500">{seller.university}</p>
+                  <MapPin className="h-3 w-3 text-muted-foreground" />
+                  <p className="text-xs text-muted-foreground">{seller.university}</p>
                 </div>
               </div>
             </div>
             
-            <div className="flex items-center space-x-1 bg-yellow-50 px-2 py-1 rounded">
-              <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-              <span className="text-sm font-medium text-yellow-700">{seller.rating}</span>
+            <div className="flex items-center space-x-1 bg-warm-50 px-2 py-1 rounded">
+              <Star className="h-3 w-3 fill-warm-400 text-warm-400" />
+              <span className="text-sm font-medium text-warm-700">{seller.rating}</span>
             </div>
           </div>
         </div>
       </CardContent>
       
       <CardFooter className="pt-0 px-4 pb-4">
-        <Button className="w-full gap-2 text-base py-5 bg-blue-50 hover:bg-blue-100 text-blue-700" variant="ghost">
+        <Button className="w-full gap-2 text-base py-5 bg-warm-50 hover:bg-warm-100 text-warm-700" variant="ghost">
           <MessageSquare className="h-4 w-4" />
           Contact Seller
         </Button>

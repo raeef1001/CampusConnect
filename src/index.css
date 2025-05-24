@@ -34,6 +34,9 @@
 
     --radius: 0.5rem;
 
+    --primary-warm: 25 95% 53%; /* A warm orange */
+    --primary-warm-foreground: 0 0% 100%; /* White for contrast */
+
     --sidebar-background: 0 0% 98%;
 
     --sidebar-foreground: 240 5.3% 26.1%;
@@ -52,6 +55,9 @@
   }
 
   .dark {
+    --primary-warm: 25 95% 53%; /* Same warm orange for dark mode */
+    --primary-warm-foreground: 0 0% 100%; /* White for contrast */
+
     --background: 222.2 84% 4.9%;
     --foreground: 210 40% 98%;
 
