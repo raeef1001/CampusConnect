@@ -15,8 +15,8 @@ import { Badge } from "@/components/ui/badge";
 import { Link, useNavigate } from "react-router-dom";
 import { useUnreadNotificationsCount } from "@/hooks/useUnreadNotificationsCount"; // Import the new hook
 import { useUnreadMessagesCount } from "@/hooks/useUnreadMessagesCount"; // Import the new hook for messages
-import { useState, useEffect } from "react"; // Added useState, useEffect
-import { auth, db } from "@/lib/firebase"; // Import auth and db
+import { useState, useEffect } from "react";
+import { auth, db } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth"; // Import onAuthStateChanged
 import { doc, getDoc } from "firebase/firestore"; // Import doc, getDoc
 import { Skeleton } from "@/components/ui/skeleton"; // Import Skeleton for loading state
@@ -35,10 +35,11 @@ interface UserProfile {
 
 export function Navbar({ isAuthenticated = false, onCreateListing, onLogout }: NavbarProps) {
   const navigate = useNavigate();
-  const { unreadCount } = useUnreadNotificationsCount(); // Use the hook to get unread notifications count
-  const { unreadMessagesCount } = useUnreadMessagesCount(); // Use the hook to get unread messages count
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null); // State for user profile
-  const [loadingUser, setLoadingUser] = useState(true); // Loading state for user profile
+  const { unreadCount } = useUnreadNotificationsCount();
+  const { unreadMessagesCount } = useUnreadMessagesCount();
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [loadingUser, setLoadingUser] = useState(true);
+  const [searchQuery, setSearchQuery] = useState(""); // State for search input
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -148,6 +149,13 @@ export function Navbar({ isAuthenticated = false, onCreateListing, onLogout }: N
             <Input
               placeholder="Search products, services, or sellers..."
               className="pl-10 pr-4"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  navigate(`/listings?search=${encodeURIComponent(searchQuery)}`);
+                }
+              }}
             />
           </div>
         </div>

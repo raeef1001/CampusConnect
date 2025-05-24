@@ -10,13 +10,15 @@ import { Input } from "@/components/ui/input"; // Added for edit form
 import { Label } from "@/components/ui/label"; // Added for edit form
 import { Textarea } from "@/components/ui/textarea"; // Added for edit form
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog"; // Added for edit profile dialog
-import { Edit, Mail, Phone, MapPin } from "lucide-react";
+import { Edit, Mail, Phone, MapPin, Star } from "lucide-react"; // Added Star icon for ratings
 import LocationPickerMap from "@/components/LocationPickerMap"; // Import the new map component
 import { auth, db } from "@/lib/firebase"; // Import auth and db
-import { doc, getDoc, updateDoc, setDoc, collection, query, where, getDocs } from "firebase/firestore"; // Import firestore functions, added updateDoc and setDoc, and collection, query, where, getDocs
+import { doc, getDoc, updateDoc, setDoc, collection, query, where, getDocs, Timestamp } from "firebase/firestore"; // Import firestore functions, added updateDoc and setDoc, and collection, query, where, getDocs, and Timestamp
 import { onAuthStateChanged } from "firebase/auth"; // Import onAuthStateChanged
 import { Skeleton } from "@/components/ui/skeleton"; // Import Skeleton
 import { useToast } from '@/components/ui/use-toast'; // Import useToast
+import { ListingCard } from "@/components/marketplace/ListingCard"; // Import ListingCard
+import { Listing } from "@/types/listing"; // Import Listing type
 
 interface UserProfile {
   uid: string;
@@ -37,6 +39,16 @@ interface UserProfile {
   rating?: number;
 }
 
+interface Review {
+  id: string;
+  reviewerId: string;
+  reviewerName: string;
+  reviewerAvatar: string;
+  rating: number;
+  comment: string;
+  timestamp: Timestamp; // Firebase Timestamp
+}
+
 export default function Profile() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
@@ -52,6 +64,8 @@ export default function Profile() {
   const [displayLocation, setDisplayLocation] = useState(''); // Stores human-readable address
   const [editAvatarFile, setEditAvatarFile] = useState<File | null>(null); // For profile image upload
   const [uploadingAvatar, setUploadingAvatar] = useState(false); // Loading state for avatar upload
+  const [userListings, setUserListings] = useState<Listing[]>([]); // State for user's listings
+  const [userReviews, setUserReviews] = useState<Review[]>([]); // State for reviews received by the user
 
   const { toast } = useToast();
 
@@ -98,7 +112,7 @@ export default function Profile() {
 
           // Fetch listings count
           const listingsRef = collection(db, "listings");
-          const qListings = query(listingsRef, where("ownerId", "==", user.uid));
+          const qListings = query(listingsRef, where("sellerId", "==", user.uid));
           const listingsSnapshot = await getDocs(qListings);
           profileData.listingsCount = listingsSnapshot.size;
 
@@ -109,12 +123,17 @@ export default function Profile() {
           profileData.reviewsCount = reviewsSnapshot.size;
 
           let totalRating = 0;
+          const fetchedReviews: Review[] = [];
           reviewsSnapshot.forEach((doc) => {
-            totalRating += doc.data().rating;
+            const reviewData = doc.data();
+            totalRating += reviewData.rating;
+            fetchedReviews.push({ id: doc.id, ...reviewData } as Review);
           });
           profileData.rating = reviewsSnapshot.size > 0 ? parseFloat((totalRating / reviewsSnapshot.size).toFixed(1)) : 0;
 
           setUserProfile(profileData);
+          setUserListings(listingsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Listing)));
+          setUserReviews(fetchedReviews);
 
           // Initialize edit form states
           setEditName(profileData.name || '');
@@ -413,7 +432,7 @@ export default function Profile() {
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="mb-8">
                 <CardHeader>
                   <CardTitle>Contact Information</CardTitle>
                   <CardDescription>How to reach me.</CardDescription>
@@ -433,6 +452,66 @@ export default function Profile() {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* My Listings Section */}
+              <h2 className="text-2xl font-bold mb-4">My Listings</h2>
+              {userListings.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                  {userListings.map((listing) => (
+                    <ListingCard 
+                      key={listing.id}
+                      id={listing.id}
+                      title={listing.title}
+                      price={listing.price}
+                      condition={listing.condition}
+                      description={listing.description}
+                      image={listing.image}
+                      seller={listing.seller}
+                      category={listing.category}
+                      isService={listing.isService}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-600 mb-8">No listings found.</p>
+              )}
+
+              {/* My Reviews Section */}
+              <h2 className="text-2xl font-bold mb-4">Reviews Received</h2>
+              {userReviews.length > 0 ? (
+                <div className="space-y-6">
+                  {userReviews.map((review) => (
+                    <Card key={review.id}>
+                      <CardContent className="p-4">
+                        <div className="flex items-center mb-2">
+                          <Avatar className="h-10 w-10 mr-3">
+                            <AvatarImage src={review.reviewerAvatar || "/placeholder.svg"} alt={review.reviewerName} />
+                            <AvatarFallback>{review.reviewerName.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="font-semibold">{review.reviewerName}</p>
+                            <div className="flex items-center text-yellow-500">
+                              {[...Array(5)].map((_, i) => (
+                                <Star
+                                  key={i}
+                                  className={`h-4 w-4 ${i < review.rating ? 'fill-current' : 'text-gray-300'}`}
+                                />
+                              ))}
+                              <span className="ml-2 text-gray-600 text-sm">({review.rating.toFixed(1)})</span>
+                            </div>
+                          </div>
+                        </div>
+                        <p className="text-gray-700">{review.comment}</p>
+                        <p className="text-sm text-gray-500 mt-2">
+                          {review.timestamp?.toDate ? new Date(review.timestamp.toDate()).toLocaleDateString() : 'N/A'}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-600">No reviews received yet.</p>
+              )}
             </div>
           </main>
         </div>

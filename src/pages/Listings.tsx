@@ -62,6 +62,7 @@ export default function Listings() {
     condition: [],
     university: "",
   });
+  const [searchQuery, setSearchQuery] = useState(""); // State for search query from URL
 
   const handleFilterChange = useCallback((newFilters: FilterState) => {
     setFilters((prevFilters) => ({ ...prevFilters, ...newFilters }));
@@ -79,6 +80,7 @@ export default function Listings() {
       condition: [],
       university: "",
     });
+    setSearchQuery(""); // Clear search query on reset
     setCurrentPage(1); // Reset to first page on filter change
     setLastVisible(null); // Reset pagination
     setFirstVisible(null);
@@ -89,10 +91,21 @@ export default function Listings() {
   useEffect(() => {
     const queryParams = new URLSearchParams(location.search);
     const filterParam = queryParams.get("filter");
+    const searchParam = queryParams.get("search"); // Get search parameter
+    setSearchQuery(searchParam || ""); // Set search query state
     const currentUser = getUser();
 
     const listingsCollectionRef = collection(db, "listings");
     let baseQuery: Query = query(listingsCollectionRef, orderBy("createdAt", "desc"));
+
+    // Apply search query
+    if (searchQuery) {
+      // For full-text search, Firestore requires specific indexing or a third-party solution.
+      // A basic "starts-with" or "contains" query can be done for exact matches or prefixes.
+      // For simplicity, we'll assume a basic prefix search on 'title' for now.
+      // For more advanced search, consider Algolia, ElasticSearch, or a similar service.
+      baseQuery = query(baseQuery, where("title", ">=", searchQuery), where("title", "<=", searchQuery + '\uf8ff'));
+    }
 
     // Apply filters
     if (filters.category) {
@@ -269,7 +282,7 @@ export default function Listings() {
     fetchListings();
 
     return () => unsubscribe();
-  }, [location.search, currentPage, filters]); // Re-run effect when location.search, currentPage, or filters change
+  }, [location.search, currentPage, filters, searchQuery]); // Re-run effect when location.search, currentPage, filters, or searchQuery change
 
   const handleNextPage = () => {
     if (hasMore) {
