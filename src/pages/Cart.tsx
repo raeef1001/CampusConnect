@@ -214,12 +214,19 @@ export default function CartPage() { // Renamed component to CartPage for clarit
             <div className="max-w-5xl mx-auto">
               <h1 className="text-2xl md:text-3xl font-bold mb-6">Your Cart</h1>
               {cartItems.length === 0 ? (
-                <Card className="p-6 py-12 text-center text-muted-foreground flex flex-col items-center">
+                <Card className="p-6 py-12 text-center text-muted-foreground flex flex-col items-center bg-white shadow-lg rounded-lg">
                   <CartIconLucide className="h-20 w-20 mb-6 text-gray-400" />
-                  <p className="text-xl font-semibold mb-2">Your cart is currently empty.</p>
-                  <p className="mb-6">Looks like you haven't added anything yet.</p>
+                  <p className="text-2xl font-extrabold mb-4 text-gray-800">
+                    Oops! Your cart is feeling a bit lonely...
+                  </p>
+                  <p className="text-lg mb-6 max-w-prose">
+                    It seems your shopping cart is on a strict diet. Let's fill it up with some awesome finds!
+                  </p>
+                  <p className="text-md mb-8 max-w-prose text-gray-600">
+                    Start exploring our amazing products and fill it up!
+                  </p>
                   <Button asChild size="lg">
-                    <Link to="/marketplace">Browse Products</Link> {/* Ensure this route exists */}
+                    <Link to="/listings">Browse All Listings</Link>
                   </Button>
                 </Card>
               ) : (

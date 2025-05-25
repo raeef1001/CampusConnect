@@ -180,7 +180,7 @@ export default function Listings() {
     const currentUser = getUser();
 
     const listingsCollectionRef = collection(db, "listings");
-    let baseQuery: Query = query(listingsCollectionRef, orderBy("createdAt", "desc"));
+    const baseQuery: Query = query(listingsCollectionRef, orderBy("createdAt", "desc"));
 
     let unsubscribe: () => void = () => {};
 
@@ -373,11 +373,6 @@ export default function Listings() {
   }, [location.search]);
 
   // Update listings when filters change
-  useEffect(() => {
-    setListings(paginatedListings);
-    setCurrentPage(1);
-  }, [paginatedListings]);
-
   // Calculate pagination info
   const totalPages = Math.ceil(filteredListings.length / listingsPerPage);
 

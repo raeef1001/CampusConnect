@@ -354,20 +354,20 @@ export function ListingCard({
         </div>
       </CardContent>
       
-      <CardFooter className="pt-0 px-4 pb-4 flex justify-between items-center"> {/* Added flex justify-between items-center */}
+      <CardFooter className="pt-0 px-4 pb-4 flex flex-col gap-2">
         {(isAvailable !== false && (availabilityStatus === 'available' || !availabilityStatus)) ? (
           <> {/* Use fragment to wrap multiple buttons */}
             {!isService && (
-              <Button className="flex-1 gap-2 text-sm py-3 bg-blue-50 hover:bg-blue-100 text-blue-700 mr-2" variant="ghost" onClick={handleAddToCart}> {/* Added flex-1 and mr-2 */}
+              <Button className="w-full gap-2 text-sm py-3 bg-blue-50 hover:bg-blue-100 text-blue-700" variant="ghost" onClick={handleAddToCart}>
                 🛒 Add to Cart
               </Button>
             )}
-            <Button className="flex-1 gap-2 text-sm py-3 bg-warm-50 hover:bg-warm-100 text-warm-700 mr-2" variant="ghost" onClick={handleContactSeller}> {/* Added flex-1 and mr-2 */}
+            <Button className="w-full gap-2 text-sm py-3 bg-warm-50 hover:bg-warm-100 text-warm-700" variant="ghost" onClick={handleContactSeller}>
               <MessageSquare className="h-4 w-4" />
               Contact Seller
             </Button>
             {!isService && (
-              <Button className="flex-1 gap-2 text-sm py-3 bg-green-50 hover:bg-green-100 text-green-700" variant="ghost" onClick={handleBid}> {/* Added flex-1 */}
+              <Button className="w-full gap-2 text-sm py-3 bg-green-50 hover:bg-green-100 text-green-700" variant="ghost" onClick={handleBid}>
                 💰 Place Bid
               </Button>
             )}
