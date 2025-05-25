@@ -67,7 +67,7 @@ export default function CreateListing() {
   const handleImageAnalysisComplete = (result: ImageAnalysisResult) => {
     setTitle(result.title);
     setDescription(result.description);
-    setCategories(result.categories); // Use categories array
+    setCategories([result.category]); // Use categories array, converting single category to array
     setCondition(result.condition);
     setPrice(result.suggestedPrice.toString());
     setAiAnalyzed(true);

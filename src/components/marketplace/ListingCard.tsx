@@ -227,13 +227,13 @@ export function ListingCard({
   return (
     <Card 
       className={cn(
-        "group transition-all duration-300 cursor-pointer overflow-hidden flex flex-col", // Added flex flex-col
+        "group transition-all duration-300 cursor-pointer overflow-hidden flex flex-col",
         "shadow-sm hover:shadow-md hover:shadow-lg hover:scale-[1.02] hover:border-primary-warm",
-        "h-full" // Ensure card takes full height of its grid cell
+        "h-full"
       )}
     >
-      <Link to={`/listings/${id}`} className="block">
-        <CardContent className="p-0 flex-grow flex flex-col"> {/* Added flex-grow and flex flex-col */}
+      <CardContent className="p-0">
+        <Link to={`/listings/${id}`}>
           <div className="relative">
             <div className="overflow-hidden">
               <img
@@ -280,99 +280,98 @@ export function ListingCard({
             </div>
           </div>
           
-          <div className="p-4 flex-grow flex flex-col justify-between"> {/* Added flex-grow and flex flex-col justify-between */}
-            <div> {/* Wrapper div for title and price/condition */}
-              <div className="flex items-start justify-between mb-2">
+          <div className="p-4">
+              <div className="flex items-center justify-between mb-2"> {/* Changed to items-center */}
                 <h3 className="font-semibold text-lg line-clamp-1 group-hover:text-primary-warm transition-colors">
                   {title}
                 </h3>
-                <div className="text-right">
+                <div className="flex items-center space-x-2">
                   <p className="font-bold text-lg text-primary-warm">
                     {isService ? `${price}/hr` : price}
                   </p>
-                  {!isService && (
-                    <Badge variant={condition === "New" ? "default" : "outline"} className={cn(
-                      "text-xs",
-                      condition === "New" && "bg-warm-500"
-                    )}>
+                  {!isService && condition === "New" && ( /* Only show "Like New" if condition is "New" */
+                    <Badge variant="outline" className="text-xs bg-warm-50 text-warm-700">
+                      Like New
+                    </Badge>
+                  )}
+                  {!isService && condition !== "New" && ( /* Show original condition badge if not "New" */
+                    <Badge variant="outline" className="text-xs">
                       {condition}
                     </Badge>
                   )}
                 </div>
               </div>
               
-              <p className="text-sm text-muted-foreground line-clamp-2 mb-3 min-h-[2.5rem]"> {/* Added min-h for consistent description height */}
+              <p className="text-sm text-muted-foreground line-clamp-2 mb-3 min-h-[2.5rem]">
                 {description}
               </p>
-
-              {/* Location and Delivery Information */}
-              {locations.length > 0 && (
-                <div className="mb-3 space-y-1">
-                  {locations.find(loc => loc.type === 'main') && (
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <MapPin className="h-3 w-3 text-blue-600" />
-                      <span>Main location set</span>
-                    </div>
-                  )}
-                  {locations.filter(loc => loc.type === 'delivery').length > 0 && deliveryRadius > 0 && (
-                    <div className="flex items-center gap-1 text-xs text-green-600">
-                      <Truck className="h-3 w-3" />
-                      <span>Delivery available ({deliveryRadius}km radius)</span>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-            
-            <div className="flex items-center justify-between mt-auto"> {/* Added mt-auto to push to bottom */}
-              {/* Seller information is now directly available from the seller prop */}
-              {seller && (
-                <div className="flex items-center space-x-2">
-                  <Avatar className="h-7 w-7 border-2 border-background shadow-sm">
-                    {seller.avatar && <AvatarImage src={seller.avatar} />}
-                    <AvatarFallback className="text-xs bg-warm-100 text-warm-800">
-                      {seller.name.split(' ').map(n => n[0]).join('')}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="text-sm font-medium">{seller.name}</p>
-                    <div className="flex items-center space-x-1">
-                      <MapPin className="h-3 w-3 text-muted-foreground" />
-                      <p className="text-xs text-muted-foreground">{seller.university}</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-              
-              {seller && (
-                <div className="flex items-center space-x-1 bg-warm-50 px-2 py-1 rounded">
-                  <Star className="h-3 w-3 fill-warm-400 text-warm-400" />
-                  <span className="text-sm font-medium text-warm-700">{seller.rating || 0}</span>
-                </div>
-              )}
-            </div>
           </div>
-        </CardContent>
-      </Link>
+        </Link>
+
+        {/* Location and Delivery Information */}
+        {locations.length > 0 && (
+          <div className="mb-3 space-y-1 px-4"> {/* Added px-4 for padding */}
+            {locations.find(loc => loc.type === 'main') && (
+              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                <MapPin className="h-3 w-3 text-blue-600" />
+                <span>Main location set</span>
+              </div>
+            )}
+            {locations.filter(loc => loc.type === 'delivery').length > 0 && deliveryRadius > 0 && (
+              <div className="flex items-center gap-1 text-xs text-green-600">
+                <Truck className="h-3 w-3" />
+                <span>Delivery available ({deliveryRadius}km radius)</span>
+              </div>
+            )}
+          </div>
+        )}
+        
+        <div className="flex items-center justify-between px-4 pb-4">
+          {seller && (
+            <div className="flex items-center space-x-2">
+              <Avatar className="h-7 w-7 border-2 border-background shadow-sm">
+                {seller.avatar && <AvatarImage src={seller.avatar} />}
+                <AvatarFallback className="text-xs bg-warm-100 text-warm-800">
+                  {seller.name.split(' ').map(n => n[0]).join('')}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <p className="text-sm font-medium">{seller.name}</p>
+                <div className="flex items-center space-x-1">
+                  <MapPin className="h-3 w-3 text-muted-foreground" />
+                  <p className="text-xs text-muted-foreground">{seller.university}</p>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {seller && (
+            <div className="flex items-center space-x-1 bg-warm-50 px-2 py-1 rounded">
+              <Star className="h-3 w-3 fill-warm-400 text-warm-400" />
+              <span className="text-sm font-medium text-warm-700">{seller.rating || 0}</span>
+            </div>
+          )}
+        </div>
+      </CardContent>
       
-      <CardFooter className="pt-0 px-4 pb-4">
+      <CardFooter className="pt-0 px-4 pb-4 flex justify-between items-center"> {/* Added flex justify-between items-center */}
         {(isAvailable !== false && (availabilityStatus === 'available' || !availabilityStatus)) ? (
-          <div className="w-full space-y-2">
+          <> {/* Use fragment to wrap multiple buttons */}
             {!isService && (
-              <Button className="w-full gap-2 text-sm py-3 bg-blue-50 hover:bg-blue-100 text-blue-700" variant="ghost" onClick={handleAddToCart}>
+              <Button className="flex-1 gap-2 text-sm py-3 bg-blue-50 hover:bg-blue-100 text-blue-700 mr-2" variant="ghost" onClick={handleAddToCart}> {/* Added flex-1 and mr-2 */}
                 🛒 Add to Cart
               </Button>
             )}
-            <Button className="w-full gap-2 text-sm py-3 bg-warm-50 hover:bg-warm-100 text-warm-700" variant="ghost" onClick={handleContactSeller}>
+            <Button className="flex-1 gap-2 text-sm py-3 bg-warm-50 hover:bg-warm-100 text-warm-700 mr-2" variant="ghost" onClick={handleContactSeller}> {/* Added flex-1 and mr-2 */}
               <MessageSquare className="h-4 w-4" />
               Contact Seller
             </Button>
             {!isService && (
-              <Button className="w-full gap-2 text-sm py-3 bg-green-50 hover:bg-green-100 text-green-700" variant="ghost" onClick={handleBid}>
+              <Button className="flex-1 gap-2 text-sm py-3 bg-green-50 hover:bg-green-100 text-green-700" variant="ghost" onClick={handleBid}> {/* Added flex-1 */}
                 💰 Place Bid
               </Button>
             )}
-          </div>
+          </>
         ) : (
           <Button 
             className="w-full gap-2 text-base py-5 cursor-not-allowed opacity-60" 

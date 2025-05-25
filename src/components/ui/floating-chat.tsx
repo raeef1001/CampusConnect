@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
@@ -6,7 +6,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { MessageCircle, Send, Loader2, ExternalLink, Star, MapPin } from "lucide-react";
+import { MessageCircle, Send, Loader2, ExternalLink, Star, MapPin, Upload, XCircle } from "lucide-react";
 import { generateListingResponse, extractListingIds, getListingsByIds } from "@/lib/gemini";
 import { Listing } from "@/types/listing";
 import { db } from '@/lib/firebase';
@@ -20,6 +20,7 @@ interface ChatMessage {
   isBot: boolean;
   timestamp: Date;
   listings?: Listing[];
+  imagePreview?: string; // Optional image preview for the message
 }
 
 interface SellerProfile {
@@ -38,13 +39,15 @@ export function FloatingChat({ listings = [] }: FloatingChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: "1",
-      content: "Hi! I'm your CampusConnect AI assistant. I can help you find products and services from the marketplace. Ask me about available listings, prices, categories, or anything else related to the products listed by students!",
+      content: "Hi! I'm your CampusConnect AI assistant. I can help you find products and services from the marketplace. Ask me about available listings, prices, categories, or anything else related to the products listed by students! You can also upload an image to find related products.",
       isBot: true,
       timestamp: new Date(),
     },
   ]);
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [currentListings, setCurrentListings] = useState<Listing[]>(listings);
 
   // Fetch listings if not provided as props
@@ -66,27 +69,38 @@ export function FloatingChat({ listings = [] }: FloatingChatProps) {
   }, [listings]);
 
   const handleSendMessage = async () => {
-    if (!inputValue.trim() || isLoading) return;
+    if ((!inputValue.trim() && !selectedImage) || isLoading) return;
 
+    const userMessageContent = inputValue.trim() || (selectedImage ? "Image uploaded." : "");
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
-      content: inputValue,
+      content: userMessageContent,
       isBot: false,
       timestamp: new Date(),
+      imagePreview: imagePreview || undefined,
     };
 
     setMessages((prev) => [...prev, userMessage]);
     setInputValue("");
+    setImagePreview(null); // Clear preview immediately
     setIsLoading(true);
 
     try {
-      // Generate AI response using Gemini
-      const aiResponse = await generateListingResponse(inputValue, currentListings);
-      
+      // Generate AI response using Gemini, passing both text and image if available
+      const aiResponse = await generateListingResponse(
+        inputValue,
+        currentListings,
+        undefined, // userProfiles
+        undefined, // messages
+        undefined, // notifications
+        selectedImage || undefined, // imageFile
+        currentListings // allListings for related product search
+      );
+
       // Extract listing IDs from the response
       const listingIds = extractListingIds(aiResponse);
       const recommendedListings = getListingsByIds(listingIds, currentListings);
-      
+
       // Clean the response text by removing listing ID markers and any markdown formatting
       const cleanedResponse = aiResponse
         .replace(/\[LISTING:[^\]]+\]/g, '')
@@ -96,7 +110,7 @@ export function FloatingChat({ listings = [] }: FloatingChatProps) {
         .replace(/`/g, '')     // Remove code backticks
         .replace(/#{1,6}\s/g, '') // Remove headers
         .trim();
-      
+
       const botResponse: ChatMessage = {
         id: (Date.now() + 1).toString(),
         content: cleanedResponse,
@@ -104,21 +118,22 @@ export function FloatingChat({ listings = [] }: FloatingChatProps) {
         timestamp: new Date(),
         listings: recommendedListings.length > 0 ? recommendedListings : undefined,
       };
-      
+
       setMessages((prev) => [...prev, botResponse]);
     } catch (error) {
       console.error('Error generating AI response:', error);
-      
+
       const errorResponse: ChatMessage = {
         id: (Date.now() + 1).toString(),
         content: "I'm sorry, I'm having trouble processing your request right now. Please try again later or contact support if the issue persists.",
         isBot: true,
         timestamp: new Date(),
       };
-      
+
       setMessages((prev) => [...prev, errorResponse]);
     } finally {
       setIsLoading(false);
+      setSelectedImage(null); // Clear selected image after processing
     }
   };
 
@@ -129,12 +144,31 @@ export function FloatingChat({ listings = [] }: FloatingChatProps) {
     }
   };
 
+  const handleImageSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedImage(file);
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setImagePreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+      // Do not clear text input when image is selected, allow user to type a message
+    }
+  }, []);
+
+  const handleRemoveImage = () => {
+    setSelectedImage(null);
+    setImagePreview(null);
+  };
+
   const suggestedQuestions = [
     "What electronics are available?",
     "Show me textbooks under $50",
     "Any tutoring services available?",
     "What's the cheapest laptop?",
-    "Show me items in good condition"
+    "Show me items in good condition",
+    "Analyze this image for products"
   ];
 
   const handleSuggestedQuestion = (question: string) => {
@@ -304,6 +338,11 @@ export function FloatingChat({ listings = [] }: FloatingChatProps) {
                           : "bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-blue-200"
                       }`}
                     >
+                      {message.imagePreview && (
+                        <div className="mb-2">
+                          <img src={message.imagePreview} alt="User uploaded" className="max-w-full h-auto rounded-lg" />
+                        </div>
+                      )}
                       <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
                       <p className="text-xs opacity-70 mt-2">
                         {message.timestamp.toLocaleTimeString([], {
@@ -365,19 +404,48 @@ export function FloatingChat({ listings = [] }: FloatingChatProps) {
           )}
           
           <div className="p-4 bg-white border-t border-gray-200">
+            {imagePreview && (
+              <div className="relative mb-3 p-2 border rounded-lg bg-gray-50">
+                <img src={imagePreview} alt="Selected preview" className="max-h-24 object-contain rounded" />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute top-1 right-1 h-6 w-6 text-red-500 hover:bg-red-100 rounded-full"
+                  onClick={handleRemoveImage}
+                >
+                  <XCircle className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
             <div className="flex space-x-3">
               <Input
-                placeholder="Ask about listings, prices, categories..."
+                placeholder="Ask about listings, prices, categories, or describe your image..."
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyPress={handleKeyPress}
                 className="flex-1 rounded-full border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                 disabled={isLoading}
               />
-              <Button 
-                size="icon" 
+              <input
+                id="image-upload-chat"
+                type="file"
+                accept="image/*"
+                onChange={handleImageSelect}
+                className="hidden"
+              />
+              <Button
+                size="icon"
+                variant="outline"
+                onClick={() => document.getElementById('image-upload-chat')?.click()}
+                disabled={isLoading}
+                className="rounded-full border-gray-300 text-gray-600 hover:bg-gray-100"
+              >
+                <Upload className="h-4 w-4" />
+              </Button>
+              <Button
+                size="icon"
                 onClick={handleSendMessage}
-                disabled={isLoading || !inputValue.trim()}
+                disabled={isLoading || (!inputValue.trim() && !selectedImage)}
                 className="rounded-full bg-blue-500 hover:bg-blue-600 shadow-lg hover:shadow-blue-200 transition-all duration-200"
               >
                 {isLoading ? (
