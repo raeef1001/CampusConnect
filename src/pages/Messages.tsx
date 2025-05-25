@@ -528,7 +528,7 @@ export default function Messages() {
       await addDoc(collection(db, "chats", selectedChat.id, "messages"), messagePayload);
 
       // Update chat with encrypted last message if encryption is supported
-      const chatUpdateData: any = {
+      const chatUpdateData: Partial<Chat> = {
         updatedAt: serverTimestamp(),
       };
 
@@ -560,7 +560,7 @@ export default function Messages() {
       setNewMessage("");
       setSelectedImage(null);
       if(fileInputRef.current) fileInputRef.current.value = "";
-      setSelectedListing(null);
+      setSelectedListing(null); // Clear selected listing after sending
       toast({
         title: "Message sent!",
         description: isEncryptionSupported() ? "Your encrypted message has been sent." : "Your message has been sent.",
@@ -753,19 +753,21 @@ export default function Messages() {
                                   />
                                 )}
                                 {message.listingId && fetchedListings[message.listingId] && (
-                                  <div className="border rounded-lg p-3 bg-background/50">
-                                    <ListingCard
-                                      id={fetchedListings[message.listingId].id}
-                                      title={fetchedListings[message.listingId].title}
-                                      price={fetchedListings[message.listingId].price}
-                                      condition={fetchedListings[message.listingId].condition}
-                                      description={fetchedListings[message.listingId].description}
-                                      image={fetchedListings[message.listingId].image}
-                                      seller={fetchedListings[message.listingId].seller}
-                                      category={fetchedListings[message.listingId].category}
-                                      listingUserId={fetchedListings[message.listingId].sellerId}
-                                    />
-                                  </div>
+                                  <Link to={`/listings/${message.listingId}`} className="block">
+                                    <div className="border rounded-lg p-3 bg-background/50 cursor-pointer hover:bg-background/70 transition-colors">
+                                      <ListingCard
+                                        id={fetchedListings[message.listingId].id}
+                                        title={fetchedListings[message.listingId].title}
+                                        price={fetchedListings[message.listingId].price}
+                                        condition={fetchedListings[message.listingId].condition}
+                                        description={fetchedListings[message.listingId].description}
+                                        image={fetchedListings[message.listingId].image}
+                                        seller={fetchedListings[message.listingId].seller}
+                                        category={fetchedListings[message.listingId].category}
+                                        listingUserId={fetchedListings[message.listingId].sellerId}
+                                      />
+                                    </div>
+                                  </Link>
                                 )}
                                 <p className="text-xs opacity-70">
                                   {message.createdAt && typeof message.createdAt === 'object' && 'toDate' in message.createdAt
@@ -867,7 +869,11 @@ export default function Messages() {
                             <ShoppingCart className="h-4 w-4" />
                           </Button>
                           
-                          <Button onClick={handleSendMessage} size="icon">
+                          <Button 
+                            onClick={handleSendMessage} 
+                            size="icon"
+                            disabled={newMessage.trim() === "" && !selectedImage && !selectedListing}
+                          >
                             <Send className="h-4 w-4" />
                           </Button>
                         </div>

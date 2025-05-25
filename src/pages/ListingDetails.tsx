@@ -15,7 +15,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { reverseGeocode, getLocationName } from "@/utils/geocoding";
 import LocationDisplay from "@/components/LocationDisplay";
 import BidDialog from "@/components/ui/bid-dialog";
-import { ReviewSystem } from "@/components/marketplace/ReviewSystem";
+import { OptimizedReviewSystem } from "@/components/marketplace/OptimizedReviewSystem";
 import { Listing, LocationData } from "@/types/listing.d";
 import { useCart } from "@/context/CartContext"; // Import useCart hook
 
@@ -530,7 +530,7 @@ export default function ListingDetails() {
 
               {/* Review System */}
               {listing.sellerId && (
-                <ReviewSystem
+                <OptimizedReviewSystem
                   sellerId={listing.sellerId}
                   sellerName={displaySellerName}
                   currentListingId={listing.id}
