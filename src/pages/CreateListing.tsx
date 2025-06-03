@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -10,14 +10,9 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { FloatingChat } from "@/components/ui/floating-chat";
 import { PriceAdvisor } from "@/components/ui/price-advisor";
 import { ImageAnalyzer } from "@/components/ui/image-analyzer";
-<<<<<<< HEAD
-import MultiLocationPickerMap from "@/components/MultiLocationPickerMap";
-import { LocationData } from '@/types/listing.d'; // Import LocationData from types
-=======
 import { VisibilityControls } from "@/components/marketplace/VisibilityControls";
 import MultiLocationPickerMap from "@/components/MultiLocationPickerMap";
 import { LocationData, VisibilitySettings } from '@/types/listing.d'; // Import LocationData from types
->>>>>>> f4fe690e00dd5322027e4ca7da1a28e707a1b779
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, Sparkles, MapPin } from 'lucide-react';
 import { db, auth, storage } from '@/lib/firebase';
@@ -26,10 +21,6 @@ import { dbRateLimiter } from '@/lib/rateLimiter';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useToast } from '@/components/ui/use-toast';
 import { ImageAnalysisResult } from '@/lib/gemini';
-<<<<<<< HEAD
-=======
-import { useEffect } from 'react';
->>>>>>> f4fe690e00dd5322027e4ca7da1a28e707a1b779
 
 export default function CreateListing() {
   const navigate = useNavigate();
@@ -44,11 +35,6 @@ export default function CreateListing() {
   const [aiAnalyzed, setAiAnalyzed] = useState(false);
   const [locations, setLocations] = useState<LocationData[]>([]);
   const [deliveryRadius, setDeliveryRadius] = useState<number>(5);
-<<<<<<< HEAD
-
-  const { toast } = useToast();
-
-=======
   const [visibilitySettings, setVisibilitySettings] = useState<VisibilitySettings>({
     mode: 'all_students'
   });
@@ -77,7 +63,6 @@ export default function CreateListing() {
     fetchUserUniversity();
   }, []);
 
->>>>>>> f4fe690e00dd5322027e4ca7da1a28e707a1b779
   const handleImageAnalysisComplete = (result: ImageAnalysisResult) => {
     setTitle(result.title);
     setDescription(result.description);
@@ -210,10 +195,7 @@ export default function CreateListing() {
         deliveryRadius: deliveryRadius, // Delivery radius in kilometers
         isAvailable: true, // New listings are available by default
         availabilityStatus: 'available', // Default availability status
-<<<<<<< HEAD
-=======
         visibilitySettings: visibilitySettings, // Visibility control settings
->>>>>>> f4fe690e00dd5322027e4ca7da1a28e707a1b779
         userEmail: user.email, // Keep userEmail at top level
         seller: sellerProfile, // Add the complete seller profile
         createdAt: serverTimestamp(),
@@ -274,16 +256,12 @@ export default function CreateListing() {
                         onPriceSuggestion={handlePriceSuggestion}
                       />
                     )}
-<<<<<<< HEAD
-=======
-
                     {/* Visibility Controls */}
                     <VisibilityControls
                       visibilitySettings={visibilitySettings}
                       onVisibilityChange={setVisibilitySettings}
                       userUniversity={userUniversity}
                     />
->>>>>>> f4fe690e00dd5322027e4ca7da1a28e707a1b779
                   </div>
                 </div>
 

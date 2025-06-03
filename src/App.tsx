@@ -18,14 +18,6 @@ import EditListing from "./pages/EditListing";
 import ListingDetails from "./pages/ListingDetails";
 import Admin from "./pages/Admin";
 import AdminSetup from "./pages/AdminSetup";
-<<<<<<< HEAD
-import CartPage from "./pages/Cart"; // Import CartPage
-import ModerationPage from "./pages/ModerationPage"; // New import for moderation page
-import NotFound from "./pages/NotFound";
-import { auth } from "./lib/firebase";
-import { onAuthStateChanged } from "firebase/auth";
-import { CartProvider } from "./context/CartContext"; // Import CartProvider
-=======
 import CartPage from "./pages/Cart";
 import CheckoutPage from "./pages/Checkout";
 import MyBidsPage from "./pages/MyBids";
@@ -41,11 +33,6 @@ import NotFound from "./pages/NotFound";
 import { auth } from "./lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { CartProvider } from "./context/CartContext";
-<<<<<<< HEAD
-import { cacheWarmingService } from "./services/cacheWarmingService";
-=======
->>>>>>> f4fe690e00dd5322027e4ca7da1a28e707a1b779
->>>>>>> 66aed01a985e70dd3ba017237bc35502a5f8136a
 
 const queryClient = new QueryClient();
 
@@ -71,11 +58,7 @@ const App = () => {
       <TooltipProvider>
         <Toaster />
         <Sonner />
-<<<<<<< HEAD
-        <CartProvider> {/* Wrap with CartProvider */}
-=======
         <CartProvider>
->>>>>>> f4fe690e00dd5322027e4ca7da1a28e707a1b779
           <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
             <AnimatedRoutes isAuthenticated={isAuthenticated} />
           </BrowserRouter>
@@ -241,9 +224,6 @@ const AnimatedRoutes = ({ isAuthenticated }: AnimatedRoutesProps) => {
             {isAuthenticated ? <EditListing /> : <Navigate to="/auth" />}
           </motion.div>
         } />
-<<<<<<< HEAD
-        <Route path="/admin" element={isAuthenticated ? <Admin /> : <Navigate to="/auth" />}>
-=======
         <Route path="/cart" element={
           <motion.div
             key="cart-page"
@@ -280,7 +260,6 @@ const AnimatedRoutes = ({ isAuthenticated }: AnimatedRoutesProps) => {
             {isAuthenticated ? <Admin /> : <Navigate to="/auth" />}
           </motion.div>
         }>
->>>>>>> f4fe690e00dd5322027e4ca7da1a28e707a1b779
           <Route path="moderation" element={<ModerationPage />} />
         </Route>
         <Route path="/admin-setup" element={
@@ -295,24 +274,15 @@ const AnimatedRoutes = ({ isAuthenticated }: AnimatedRoutesProps) => {
             {isAuthenticated ? <AdminSetup /> : <Navigate to="/auth" />}
           </motion.div>
         } />
-<<<<<<< HEAD
-        <Route path="/cart" element={
-          <motion.div
-            key="cart-page"
-=======
         <Route path="/bids/my-bids" element={
           <motion.div
             key="my-bids"
->>>>>>> f4fe690e00dd5322027e4ca7da1a28e707a1b779
             initial="initial"
             animate="in"
             exit="out"
             variants={pageVariants}
             transition={pageTransition}
           >
-<<<<<<< HEAD
-            {isAuthenticated ? <CartPage /> : <Navigate to="/auth" />}
-=======
             {isAuthenticated ? <MyBidsPage /> : <Navigate to="/auth" />}
           </motion.div>
         } />
@@ -350,7 +320,6 @@ const AnimatedRoutes = ({ isAuthenticated }: AnimatedRoutesProps) => {
             transition={pageTransition}
           >
             {isAuthenticated ? <IncomingOrdersPage /> : <Navigate to="/auth" />}
->>>>>>> f4fe690e00dd5322027e4ca7da1a28e707a1b779
           </motion.div>
         } />
         <Route path="/services" element={

@@ -12,20 +12,12 @@ import {
   ChevronLeft,
   ChevronRight,
   Bell, // Added Bell import
-<<<<<<< HEAD
-  Bookmark // Added Bookmark import
-=======
   Bookmark, // Added Bookmark import
   DollarSign, // Added DollarSign import for bidding
   TrendingUp, // Added TrendingUp import for received bids
   ShoppingBag, // Added ShoppingBag import for incoming orders
-<<<<<<< HEAD
   ShoppingCart, // Added ShoppingCart import for outgoing orders
   Briefcase // Added Briefcase import for services
-=======
-  ShoppingCart // Added ShoppingCart import for outgoing orders
->>>>>>> f4fe690e00dd5322027e4ca7da1a28e707a1b779
->>>>>>> 66aed01a985e70dd3ba017237bc35502a5f8136a
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton"; // Added Skeleton import
@@ -55,17 +47,11 @@ const menuItems = (unreadNotificationsCount: number, unreadMessagesCount: number
   { icon: Package, label: "All Listings", href: "/listings" },
   { icon: Package, label: "My Listings", href: "/listings?filter=my-listings" },
   { icon: Bookmark, label: "Bookmarked Products", href: "/listings?filter=bookmarked-listings" },
-<<<<<<< HEAD
   { icon: Briefcase, label: "Services", href: "/services" },
-=======
-<<<<<<< HEAD
-=======
->>>>>>> 66aed01a985e70dd3ba017237bc35502a5f8136a
   { icon: DollarSign, label: "My Bids", href: "/bids/my-bids" },
   { icon: TrendingUp, label: "Received Bids", href: "/bids/received" },
   { icon: ShoppingCart, label: "My Orders", href: "/orders/outgoing" },
   { icon: ShoppingBag, label: "Incoming Orders", href: "/orders/incoming" },
->>>>>>> f4fe690e00dd5322027e4ca7da1a28e707a1b779
   { icon: MessageSquare, label: "Messages", href: "/messages", badge: unreadMessagesCount > 0 ? unreadMessagesCount : undefined },
   { icon: Bell, label: "Notifications", href: "/notifications", badge: unreadNotificationsCount > 0 ? unreadNotificationsCount : undefined }, // Use dynamic count
   { icon: User, label: "Profile", href: "/profile" },
@@ -137,18 +123,16 @@ export function Sidebar({ className, isCollapsed = false, onToggle }: SidebarPro
     )}>
       <div className="flex h-16 items-center justify-between px-4 border-b border-sidebar-border">
         {!collapsed && (
-          <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-primary-warm rounded-lg flex items-center justify-center">
-            <span className="text-black font-bold text-sm">CC</span>
-          </div>
-          <span className="font-semibold text-black">CampusConnect</span>
-          </div>
+          <Link to="/dashboard" className="flex items-center space-x-2">
+            <img src="/logo.png" alt="CampusConnect Logo" className="h-8 w-8" />
+            <span className="font-semibold text-sidebar-foreground">CampusConnect</span>
+          </Link>
         )}
         <Button
           variant="ghost"
           size="icon"
           onClick={handleToggle}
-          className="h-8 w-8 text-black hover:bg-sidebar-accent hover:text-black"
+          className="h-8 w-8 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground"
         >
           {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
         </Button>
@@ -168,7 +152,7 @@ export function Sidebar({ className, isCollapsed = false, onToggle }: SidebarPro
                     : "ghost"
                 }
                 className={cn(
-                  "w-full justify-start text-black hover:bg-sidebar-accent hover:text-black",
+                  "w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground",
                   collapsed && "px-2"
                 )}
                 asChild
@@ -179,7 +163,7 @@ export function Sidebar({ className, isCollapsed = false, onToggle }: SidebarPro
                     <>
                       <span className="ml-2">{item.label}</span>
                       {item.badge !== undefined && item.badge > 0 && (
-                        <span className="ml-auto bg-warm-500 text-primary-warm-foreground text-xs rounded-full px-2 py-0.5">
+                        <span className="ml-auto bg-primary-warm text-primary-warm-foreground text-xs rounded-full px-2 py-0.5">
                           {item.badge}
                         </span>
                       )}
@@ -192,7 +176,7 @@ export function Sidebar({ className, isCollapsed = false, onToggle }: SidebarPro
 
           {!collapsed && userProfile && (userProfile.role === 'admin' || userProfile.isAdmin) && (
             <div className="pt-4">
-              <p className="px-3 text-xs font-medium text-black uppercase tracking-wider">
+              <p className="px-3 text-xs font-medium text-sidebar-foreground uppercase tracking-wider">
                 Admin
               </p>
               <div className="space-y-1 mt-2">
@@ -200,7 +184,7 @@ export function Sidebar({ className, isCollapsed = false, onToggle }: SidebarPro
                   <Button
                     key={item.href}
                     variant={location.pathname === item.href ? "sidebar-primary" : "ghost"}
-                    className="w-full justify-start text-black hover:bg-sidebar-accent hover:text-black"
+                    className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground"
                     asChild
                   >
                     <Link to={item.href}>
@@ -240,8 +224,8 @@ export function Sidebar({ className, isCollapsed = false, onToggle }: SidebarPro
             </Avatar>
             {!collapsed && (
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate text-black">{userProfile.name}</p>
-                <p className="text-xs text-black truncate">{userProfile.university} {userProfile.major && `- ${userProfile.major}`}</p>
+                <p className="text-sm font-medium truncate text-sidebar-foreground">{userProfile.name}</p>
+                <p className="text-xs text-sidebar-foreground truncate">{userProfile.university} {userProfile.major && `- ${userProfile.major}`}</p>
               </div>
             )}
           </div>
@@ -257,8 +241,8 @@ export function Sidebar({ className, isCollapsed = false, onToggle }: SidebarPro
             </Avatar>
             {!collapsed && (
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate text-black">Guest User</p>
-                <p className="text-xs text-black truncate">Please log in</p>
+                <p className="text-sm font-medium truncate text-sidebar-foreground">Guest User</p>
+                <p className="text-xs text-sidebar-foreground truncate">Please log in</p>
               </div>
             )}
           </div>
@@ -266,7 +250,7 @@ export function Sidebar({ className, isCollapsed = false, onToggle }: SidebarPro
         
         {!collapsed && (
           <div className="mt-3 space-y-1">
-            <Button variant="ghost" size="sm" className="w-full justify-start text-destructive hover:text-destructive-foreground">
+            <Button variant="ghost" size="sm" className="w-full justify-start text-sidebar-foreground hover:text-destructive">
               <LogOut className="h-4 w-4 mr-2" />
               Logout
             </Button>

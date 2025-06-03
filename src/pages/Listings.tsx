@@ -4,11 +4,7 @@ import { Navbar } from "@/components/layout/Navbar";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { FloatingChat } from "@/components/ui/floating-chat";
 import { db } from '@/lib/firebase';
-<<<<<<< HEAD
-import { collection, query, orderBy, where, onSnapshot, Timestamp, doc, getDoc, getDocs, Query, limit, startAfter, QueryDocumentSnapshot } from 'firebase/firestore';
-=======
 import { collection, query, orderBy, where, onSnapshot, Timestamp, doc, getDoc, getDocs, Query, limit, startAfter, QueryDocumentSnapshot, documentId } from 'firebase/firestore';
->>>>>>> f4fe690e00dd5322027e4ca7da1a28e707a1b779
 import { ListingCard } from "@/components/marketplace/ListingCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getUser } from "@/utils/auth";
@@ -184,7 +180,7 @@ export default function Listings() {
     const currentUser = getUser();
 
     const listingsCollectionRef = collection(db, "listings");
-    let baseQuery: Query = query(listingsCollectionRef, orderBy("createdAt", "desc"));
+    const baseQuery: Query = query(listingsCollectionRef, orderBy("createdAt", "desc"));
 
     let unsubscribe: () => void = () => {};
 
@@ -202,11 +198,7 @@ export default function Listings() {
 
             for (let i = 0; i < bookmarkedListingIds.length; i += batchSize) {
               const batchIds = bookmarkedListingIds.slice(i, i + batchSize);
-<<<<<<< HEAD
-              const listingsBatchQuery = query(collection(db, "listings"), where("id", "in", batchIds));
-=======
               const listingsBatchQuery = query(collection(db, "listings"), where(documentId(), "in", batchIds));
->>>>>>> f4fe690e00dd5322027e4ca7da1a28e707a1b779
               listingBatches.push(
                 getDocs(listingsBatchQuery).then(async (snapshot) => {
                   const batchListings: Listing[] = [];

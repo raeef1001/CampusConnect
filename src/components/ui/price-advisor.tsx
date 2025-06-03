@@ -85,7 +85,7 @@ export function PriceAdvisor({
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-blue-900">
           <TrendingUp className="h-5 w-5" />
-          AI Price Advisor
+          Price Advisor
         </CardTitle>
         <CardDescription>
           Get intelligent pricing suggestions based on similar listings and market data

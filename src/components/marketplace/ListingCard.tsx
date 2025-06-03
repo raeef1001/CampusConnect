@@ -202,10 +202,7 @@ export function ListingCard({
         seconds: Math.floor(Date.now() / 1000),
         nanoseconds: 0,
       }, // Dummy createdAt for cart context
-<<<<<<< HEAD
-=======
       seller: seller, // Add the seller object
->>>>>>> f4fe690e00dd5322027e4ca7da1a28e707a1b779
     }, 1); // Add 1 quantity by default
     toast({
       title: "Added to Cart",
@@ -230,9 +227,9 @@ export function ListingCard({
   return (
     <Card 
       className={cn(
-        "group transition-all duration-300 cursor-pointer overflow-hidden flex flex-col", // Added flex flex-col
-        "shadow-sm hover:shadow-md hover:shadow-lg hover:scale-[1.02] hover:border-primary-warm",
-        "h-full" // Ensure card takes full height of its grid cell
+        "group transition-all duration-300 cursor-pointer overflow-hidden flex flex-col",
+        "rounded-xl shadow-md hover:shadow-xl hover:scale-[1.02] hover:border-primary-warm", // Enhanced shadow and rounded corners
+        "h-full"
       )}
     >
       <Link to={`/listings/${id}`} className="block">
@@ -362,16 +359,28 @@ export function ListingCard({
         {(isAvailable !== false && (availabilityStatus === 'available' || !availabilityStatus)) ? (
           <div className="w-full space-y-2">
             {!isService && (
-              <Button className="w-full gap-2 text-sm py-3 bg-blue-50 hover:bg-blue-100 text-blue-700" variant="ghost" onClick={handleAddToCart}>
+              <Button 
+                className="w-full gap-2 text-sm py-3 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 hover:border-blue-300 transition-colors duration-200" 
+                variant="ghost" 
+                onClick={handleAddToCart}
+              >
                 🛒 Add to Cart
               </Button>
             )}
-            <Button className="w-full gap-2 text-sm py-3 bg-warm-50 hover:bg-warm-100 text-warm-700" variant="ghost" onClick={handleContactSeller}>
+            <Button 
+              className="w-full gap-2 text-sm py-3 bg-warm-50 hover:bg-warm-100 text-warm-700 border border-warm-200 hover:border-warm-300 transition-colors duration-200" 
+              variant="ghost" 
+              onClick={handleContactSeller}
+            >
               <MessageSquare className="h-4 w-4" />
               Contact Seller
             </Button>
             {!isService && (
-              <Button className="w-full gap-2 text-sm py-3 bg-green-50 hover:bg-green-100 text-green-700" variant="ghost" onClick={handleBid}>
+              <Button 
+                className="w-full gap-2 text-sm py-3 bg-green-50 hover:bg-green-100 text-green-700 border border-green-200 hover:border-green-300 transition-colors duration-200" 
+                variant="ghost" 
+                onClick={handleBid}
+              >
                 💰 Place Bid
               </Button>
             )}

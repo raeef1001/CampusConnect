@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -100,9 +99,9 @@ export default function Landing() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white via-blue-50 to-white">
-      <div className="absolute top-0 w-full h-[500px] bg-gradient-to-br from-blue-600/5 via-transparent to-emerald-600/5 -z-10"></div>
-      <div className="absolute top-0 w-full h-[800px] bg-[radial-gradient(ellipse_at_center,rgba(59,130,246,0.15),transparent_50%)] -z-10"></div>
+    <div className="min-h-screen bg-gradient-to-b from-background via-primary-50 to-background">
+      <div className="absolute top-0 w-full h-[500px] bg-gradient-to-br from-primary/5 via-transparent to-primary-foreground/5 -z-10"></div>
+      <div className="absolute top-0 w-full h-[800px] bg-[radial-gradient(ellipse_at_center,rgba(var(--primary-rgb),0.15),transparent_50%)] -z-10"></div>
 
       <Navbar isAuthenticated={isLoggedIn} onLogout={handleDemoLogout} />
       
@@ -110,13 +109,13 @@ export default function Landing() {
       <section className="container py-20 md:py-32">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           <div className="space-y-8 relative">
-            <div className="absolute -top-16 -left-16 w-64 h-64 bg-blue-200/30 rounded-full blur-3xl -z-10"></div>
-            <div className="absolute top-32 -right-10 w-40 h-40 bg-emerald-200/30 rounded-full blur-3xl -z-10"></div>
+            <div className="absolute -top-16 -left-16 w-64 h-64 bg-primary/30 rounded-full blur-3xl -z-10"></div>
+            <div className="absolute top-32 -right-10 w-40 h-40 bg-primary-foreground/30 rounded-full blur-3xl -z-10"></div>
             <div className="space-y-4">
-              <Badge variant="secondary" className="bg-blue-100 text-blue-700 hover:bg-blue-100 px-4 py-1 text-sm">
+              <Badge variant="secondary" className="bg-primary/10 text-primary hover:bg-primary/20 px-4 py-1 text-sm">
                 🎓 For Students, By Students
               </Badge>
-              <h1 className="text-4xl md:text-6xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-blue-800">
+              <h1 className="text-4xl md:text-6xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary-foreground">
                 Redefining Campus Commerce
               </h1>
               <p className="text-xl text-gray-600 leading-relaxed max-w-xl">
@@ -126,7 +125,7 @@ export default function Landing() {
             <div className="flex flex-col sm:flex-row gap-4">
               <Button 
                 size="lg" 
-                className="bg-blue-600 hover:bg-blue-700 text-lg px-8 shadow-lg shadow-blue-600/20 transition-all duration-300 hover:translate-y-[-2px]"
+                className="bg-primary hover:bg-primary-foreground text-lg px-8 shadow-lg shadow-primary/20 transition-all duration-300 hover:translate-y-[-2px]"
                 onClick={handleDemoLogin}
               >
                 {isLoggedIn ? "Go to Dashboard" : "Demo Login (No Backend)"}
@@ -159,24 +158,22 @@ export default function Landing() {
             </div>
           </div>
           <div className="relative">
-            <div className="absolute -z-10 -top-10 -right-10 w-full h-full bg-gradient-to-br from-blue-400/10 to-emerald-400/10 rounded-2xl transform rotate-6 scale-105"></div>
+            <div className="absolute -z-10 -top-10 -right-10 w-full h-full bg-gradient-to-br from-primary/10 to-primary-foreground/10 rounded-2xl transform rotate-6 scale-105"></div>
             <div className="relative z-10 bg-white/70 backdrop-blur-sm rounded-2xl shadow-2xl p-8 border border-white/20 flex flex-col items-center justify-center min-h-[320px]">
               <div className="flex flex-col items-center space-y-2">
-                <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
-                  <span className="text-white font-bold">CC</span>
-                </div>
+                <img src="/logo.png" alt="CampusConnect Logo" className="w-10 h-10" />
                 <h3 className="font-semibold text-gray-800">Welcome to CampusConnect!</h3>
                 <p className="text-sm text-gray-500">The smarter way to trade on campus</p>
               </div>
               <div className="mt-6 w-full space-y-3">
-                <Card className="border-l-4 border-l-blue-500">
+                <Card className="border-l-4 border-l-primary">
                   <CardContent className="p-4 flex items-center justify-between">
                     <div>
                       <h4 className="font-medium">MacBook Pro 2021</h4>
                       <p className="text-sm text-gray-500">Like New • Electronics</p>
                     </div>
                     <div className="text-right">
-                      <p className="font-bold text-blue-600">$1,200</p>
+                      <p className="font-bold text-primary">$1,200</p>
                       <p className="text-xs text-green-600">AI Suggested: $1,150-$1,250</p>
                     </div>
                   </CardContent>
@@ -188,7 +185,7 @@ export default function Landing() {
                       <p className="text-sm text-gray-500">Service • Academic</p>
                     </div>
                     <div className="text-right">
-                      <p className="font-bold text-emerald-600">$15/hr</p>
+                      <p className="font-bold text-primary">$15/hr</p>
                       <div className="flex items-center space-x-1">
                         <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
                         <span className="text-xs">4.9 (23 reviews)</span>
@@ -203,9 +200,9 @@ export default function Landing() {
                       <p className="text-sm text-gray-500">Good • Textbooks</p>
                     </div>
                     <div className="text-right">
-                      <p className="font-bold text-blue-600">$85</p>
+                      <p className="font-bold text-primary">$85</p>
                       <div className="flex items-center space-x-1">
-                        <span className="text-xs text-emerald-600">3 Interested Buyers</span>
+                        <span className="text-xs text-primary">3 Interested Buyers</span>
                       </div>
                     </div>
                   </CardContent>
@@ -213,8 +210,8 @@ export default function Landing() {
               </div>
             </div>
             {/* Decorative elements */}
-            <div className="absolute -bottom-10 -right-10 w-20 h-20 bg-blue-400/20 rounded-full blur-2xl"></div>
-            <div className="absolute -top-6 right-20 w-12 h-12 bg-emerald-400/30 rounded-full blur-xl"></div>
+            <div className="absolute -bottom-10 -right-10 w-20 h-20 bg-primary/20 rounded-full blur-2xl"></div>
+            <div className="absolute -top-6 right-20 w-12 h-12 bg-primary-foreground/30 rounded-full blur-xl"></div>
           </div>
         </div>
       </section>
@@ -223,30 +220,30 @@ export default function Landing() {
       <section className="container py-20 border-t border-gray-100">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
           <div className="text-center">
-            <p className="text-4xl font-bold text-blue-600">10,000+</p>
+            <p className="text-4xl font-bold text-primary">10,000+</p>
             <p className="text-gray-600">Verified Students</p>
           </div>
           <div className="text-center">
-            <p className="text-4xl font-bold text-blue-600">25+</p>
+            <p className="text-4xl font-bold text-primary">25+</p>
             <p className="text-gray-600">Universities</p>
           </div>
           <div className="text-center">
-            <p className="text-4xl font-bold text-blue-600">30,000+</p>
+            <p className="text-4xl font-bold text-primary">30,000+</p>
             <p className="text-gray-600">Items Listed</p>
           </div>
           <div className="text-center">
-            <p className="text-4xl font-bold text-blue-600">99%</p>
+            <p className="text-4xl font-bold text-primary">99%</p>
             <p className="text-gray-600">Satisfaction Rate</p>
           </div>
         </div>
       </section>
 
       {/* Features Section */}
-      <section id="features" className="py-20 bg-white relative">
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-white to-blue-50 -z-10"></div>
+      <section id="features" className="py-20 bg-background relative">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-background to-primary/5 -z-10"></div>
         <div className="container relative">
           <div className="text-center space-y-4 mb-16">
-            <Badge variant="secondary" className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 px-4 py-1">
+            <Badge variant="secondary" className="bg-primary/10 text-primary hover:bg-primary/20 px-4 py-1">
               Platform Features
             </Badge>
             <h2 className="text-3xl md:text-4xl font-bold">Designed for University Life</h2>
@@ -259,8 +256,8 @@ export default function Landing() {
             {features.map((feature, index) => (
               <Card key={index} className="border border-gray-100 shadow-sm hover:shadow-md transition-all duration-300 transform hover:-translate-y-1">
                 <CardContent className="pt-6">
-                  <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
-                    <feature.icon className="h-6 w-6 text-blue-600" />
+                  <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
+                    <feature.icon className="h-6 w-6 text-primary" />
                   </div>
                   <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>
                   <p className="text-gray-600">{feature.description}</p>
@@ -272,14 +269,14 @@ export default function Landing() {
       </section>
 
       {/* Benefits Section */}
-      <section id="about" className="py-24 bg-gradient-to-br from-blue-600 to-blue-800 text-white">
+      <section id="about" className="py-24 bg-gradient-to-br from-primary to-primary-foreground text-white">
         <div className="container">
           <div className="text-center space-y-4 mb-16">
             <Badge className="bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm px-4 py-1">
               Why CampusConnect
             </Badge>
             <h2 className="text-3xl md:text-4xl font-bold">Benefits That Matter</h2>
-            <p className="text-xl text-blue-100 max-w-3xl mx-auto">
+            <p className="text-xl text-primary-foreground/80 max-w-3xl mx-auto">
               We're not just another marketplace. We're building a safer, smarter way for students to connect.
             </p>
           </div>
@@ -287,9 +284,9 @@ export default function Landing() {
           <div className="grid md:grid-cols-3 gap-8">
             {benefits.map((benefit, index) => (
               <div key={index} className="bg-white/10 backdrop-blur-sm rounded-2xl p-8 hover:bg-white/20 transition-all duration-300">
-                <benefit.icon className="h-10 w-10 text-blue-300 mb-4" />
+                <benefit.icon className="h-10 w-10 text-primary-foreground/60 mb-4" />
                 <h3 className="text-xl font-semibold mb-2">{benefit.title}</h3>
-                <p className="text-blue-100">{benefit.description}</p>
+                <p className="text-primary-foreground/80">{benefit.description}</p>
               </div>
             ))}
           </div>
@@ -300,20 +297,20 @@ export default function Landing() {
       <section className="py-24 bg-gray-50">
         <div className="container">
           <div className="text-center mb-12">
-            <Badge variant="secondary" className="bg-blue-100 text-blue-700 px-4 py-1 font-semibold rounded-full tracking-wide">
+            <Badge variant="secondary" className="bg-primary/10 text-primary px-4 py-1 font-semibold rounded-full tracking-wide">
               Getting Started
             </Badge>
-            <h2 className="text-3xl md:text-4xl font-extrabold mt-4 mb-2 text-blue-800 tracking-tight">How CampusConnect Works</h2>
+            <h2 className="text-3xl md:text-4xl font-extrabold mt-4 mb-2 text-primary tracking-tight">How CampusConnect Works</h2>
             <p className="text-base md:text-lg text-gray-600 max-w-xl mx-auto font-medium">
-              Buy, sell, and connect with your campus community in <span className="text-blue-700 font-semibold">three simple steps</span>.
+              Buy, sell, and connect with your campus community in <span className="text-primary font-semibold">three simple steps</span>.
             </p>
           </div>
           <div className="relative flex flex-col md:flex-row md:justify-center md:items-stretch gap-8 md:gap-12">
             {/* Connector line */}
-            <div className="hidden md:block absolute top-1/2 left-0 right-0 h-0.5 bg-gradient-to-r from-blue-200 via-blue-100 to-emerald-100 opacity-70 -z-10" style={{top:'60px'}}></div>
+            <div className="hidden md:block absolute top-1/2 left-0 right-0 h-0.5 bg-gradient-to-r from-primary/20 via-primary/10 to-primary-foreground/10 opacity-70 -z-10" style={{top:'60px'}}></div>
             {/* Step 1 */}
             <div className="flex-1 min-w-[220px] max-w-xs mx-auto md:mx-0 bg-white rounded-xl shadow border border-gray-100 flex flex-col items-center px-6 py-8 transition-transform hover:scale-105">
-              <div className="w-14 h-14 flex items-center justify-center rounded-full bg-blue-600 text-white font-bold text-2xl mb-4 shadow">
+              <div className="w-14 h-14 flex items-center justify-center rounded-full bg-primary text-white font-bold text-2xl mb-4 shadow">
                 1
               </div>
               <h3 className="font-semibold text-lg mb-1 text-gray-900">Sign Up</h3>
@@ -321,7 +318,7 @@ export default function Landing() {
             </div>
             {/* Step 2 */}
             <div className="flex-1 min-w-[220px] max-w-xs mx-auto md:mx-0 bg-white rounded-xl shadow border border-gray-100 flex flex-col items-center px-6 py-8 transition-transform hover:scale-105">
-              <div className="w-14 h-14 flex items-center justify-center rounded-full bg-blue-600 text-white font-bold text-2xl mb-4 shadow">
+              <div className="w-14 h-14 flex items-center justify-center rounded-full bg-primary text-white font-bold text-2xl mb-4 shadow">
                 2
               </div>
               <h3 className="font-semibold text-lg mb-1 text-gray-900">Browse or List</h3>
@@ -329,7 +326,7 @@ export default function Landing() {
             </div>
             {/* Step 3 */}
             <div className="flex-1 min-w-[220px] max-w-xs mx-auto md:mx-0 bg-white rounded-xl shadow border border-gray-100 flex flex-col items-center px-6 py-8 transition-transform hover:scale-105">
-              <div className="w-14 h-14 flex items-center justify-center rounded-full bg-blue-600 text-white font-bold text-2xl mb-4 shadow">
+              <div className="w-14 h-14 flex items-center justify-center rounded-full bg-primary text-white font-bold text-2xl mb-4 shadow">
                 3
               </div>
               <h3 className="font-semibold text-lg mb-1 text-gray-900">Connect & Trade</h3>
@@ -340,10 +337,10 @@ export default function Landing() {
       </section>
 
       {/* Testimonials Section */}
-      <section className="py-24 bg-white">
+      <section className="py-24 bg-background">
         <div className="container">
           <div className="text-center space-y-4 mb-16">
-            <Badge variant="secondary" className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 px-4 py-1">
+            <Badge variant="secondary" className="bg-primary/10 text-primary hover:bg-primary/20 px-4 py-1">
               Student Stories
             </Badge>
             <h2 className="text-3xl md:text-4xl font-bold">Loved by Students Across The Country</h2>
@@ -382,24 +379,24 @@ export default function Landing() {
 
       {/* CTA Section */}
       <section id="contact" className="py-28 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-700/90 to-blue-900/90 -z-20"></div>
+        <div className="absolute inset-0 bg-gradient-to-r from-primary/90 to-primary-foreground/90 -z-20"></div>
         <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=1200&auto=format&fit=crop&q=60&ixlib=rb-4.0.3')] opacity-20 -z-10 bg-cover bg-center"></div>
         <div className="container text-center relative">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-96 bg-blue-500/40 rounded-full blur-3xl -z-10"></div>
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-96 bg-primary/40 rounded-full blur-3xl -z-10"></div>
           <div className="space-y-8 max-w-3xl mx-auto">
-           <Badge variant="secondary" className="bg-blue-100 text-blue-700 hover:bg-blue-100 px-4 py-1">
+           <Badge variant="secondary" className="bg-primary/10 text-primary hover:bg-primary/20 px-4 py-1">
               Get Started Today
             </Badge>
             <h2 className="text-3xl md:text-5xl font-extrabold drop-shadow-lg">
               Ready to Transform Your Campus Experience?
             </h2>
-            <p className="text-xl text-blue-400 font-medium drop-shadow max-w-2xl mx-auto">
+            <p className="text-xl text-primary-foreground/80 font-medium drop-shadow max-w-2xl mx-auto">
               Join the community of students building a smarter, safer marketplace for campus commerce.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center mt-6">
               <Button 
                 size="lg" 
-                className="bg-emerald-400 hover:bg-emerald-500 text-lg px-10 py-6 font-bold shadow-2xl shadow-emerald-400/30 transition-all duration-300 hover:-translate-y-1 focus:ring-4 focus:ring-emerald-300 focus:outline-none"
+                className="bg-primary hover:bg-primary-foreground text-lg px-10 py-6 font-bold shadow-2xl shadow-primary/30 transition-all duration-300 hover:-translate-y-1 focus:ring-4 focus:ring-primary/50 focus:outline-none"
                 asChild
               >
                 <Link to="/auth?tab=signup">
@@ -410,7 +407,7 @@ export default function Landing() {
               <Button 
                 size="lg" 
                 variant="outline" 
-                className="text-lg px-10 py-6 border-white  font-semibold hover:bg-blue/10 hover:text-black transition-all duration-300 focus:ring-2 focus:ring-white"
+                className="text-lg px-10 py-6 border-white  font-semibold hover:bg-white/10 hover:text-white transition-all duration-300 focus:ring-2 focus:ring-white"
                 onClick={() => {
                   document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' });
                 }}
@@ -427,7 +424,7 @@ export default function Landing() {
       <section className="py-24 bg-gray-50">
         <div className="container">
           <div className="text-center space-y-4 mb-16">
-            <Badge variant="secondary" className="bg-blue-100 text-blue-700 hover:bg-blue-100 px-4 py-1">
+            <Badge variant="secondary" className="bg-primary/10 text-primary hover:bg-primary/20 px-4 py-1">
               Questions Answered
             </Badge>
             <h2 className="text-3xl md:text-4xl font-bold">Frequently Asked Questions</h2>
@@ -465,12 +462,8 @@ export default function Landing() {
         <div className="container">
           <div className="grid md:grid-cols-4 gap-8">
             <div className="space-y-4">
-              <div className="flex items-center space-x-2">
-                <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
-                  <span className="text-white font-bold text-sm">CC</span>
-                </div>
-                <span className="font-semibold text-xl">CampusConnect</span>
-              </div>
+              <img src="/logo.png" alt="CampusConnect Logo" className="w-10 h-10" />
+              <span className="font-semibold text-xl">CampusConnect</span>
               <p className="text-gray-400">
                 The smart marketplace for university students. Safe, verified, and AI-powered.
               </p>

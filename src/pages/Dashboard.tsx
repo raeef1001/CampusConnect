@@ -13,8 +13,6 @@ import {
   Grid, 
   List, 
   SlidersHorizontal,
-  ChevronLeft,
-  ChevronRight,
   Search,
   Plus,
   Bell
@@ -22,15 +20,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
 import {
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  Legend,
-  CartesianGrid
-} from "recharts";
+} from "lucide-react";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -38,9 +28,7 @@ export default function Dashboard() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [sortOrder, setSortOrder] = useState("newest");
-  const [currentPage, setCurrentPage] = useState(1);
   const [showFilterSidebar, setShowFilterSidebar] = useState(false);
-  const itemsPerPage = 6;
   const [listings, setListings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -50,6 +38,7 @@ export default function Dashboard() {
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000]);
   const [selectedConditions, setSelectedConditions] = useState<string[]>([]);
   const [selectedUniversity, setSelectedUniversity] = useState("");
+  const [sellerName, setSellerName] = useState(""); // Add sellerName state
 
   // Memoized current filters object for FilterSidebar
   const currentFilters = useMemo(() => ({
@@ -57,15 +46,16 @@ export default function Dashboard() {
     priceRange: priceRange,
     condition: selectedConditions,
     university: selectedUniversity,
-  }), [selectedCategory, priceRange, selectedConditions, selectedUniversity]);
+    sellerName: sellerName, // Include sellerName
+  }), [selectedCategory, priceRange, selectedConditions, selectedUniversity, sellerName]);
 
   // Handler for applying filters from FilterSidebar
-  const handleFilterChange = useCallback((filters: { category: string; priceRange: [number, number]; condition: string[]; university: string; }) => {
+  const handleFilterChange = useCallback((filters: { category: string; priceRange: [number, number]; condition: string[]; university: string; sellerName: string; }) => {
     setSelectedCategory(filters.category);
     setPriceRange(filters.priceRange);
     setSelectedConditions(filters.condition);
     setSelectedUniversity(filters.university);
-    setCurrentPage(1); // Reset to first page on filter change
+    setSellerName(filters.sellerName); // Set sellerName
   }, []);
 
   // Handler for resetting filters from FilterSidebar
@@ -74,7 +64,12 @@ export default function Dashboard() {
     setPriceRange([0, 1000]);
     setSelectedConditions([]);
     setSelectedUniversity("");
-    setCurrentPage(1); // Reset to first page on filter reset
+    setSellerName(""); // Reset sellerName
+  }, []);
+
+  // Handler for seller name change from FilterSidebar
+  const handleSellerNameChange = useCallback((name: string) => {
+    setSellerName(name);
   }, []);
 
   useEffect(() => {
@@ -214,42 +209,6 @@ export default function Dashboard() {
     return currentListings;
   }, [searchTerm, sortOrder, listings, selectedCategory, priceRange, selectedConditions, selectedUniversity]);
 
-  // Pagination logic
-  const totalPages = Math.ceil(filteredAndSortedListings.length / itemsPerPage);
-  const paginatedListings = filteredAndSortedListings.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
-
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-  };
-
-  const chartData = useMemo(() => {
-    const monthlyListings: { [key: string]: number } = {};
-    
-    listings.forEach((listing) => {
-      const date = listing.createdAt?.toDate();
-      if (date) {
-        const month = date.toLocaleString('default', { month: 'short' });
-        const year = date.getFullYear();
-        const key = `${month} ${year}`; // e.g., "Jan 2024"
-        monthlyListings[key] = (monthlyListings[key] || 0) + 1;
-      }
-    });
-
-    // Sort months chronologically for the chart
-    const sortedMonths = Object.keys(monthlyListings).sort((a, b) => {
-      const dateA = new Date(a);
-      const dateB = new Date(b);
-      return dateA.getTime() - dateB.getTime();
-    });
-
-    return sortedMonths.map(monthYear => ({
-      name: monthYear,
-      listings: monthlyListings[monthYear],
-    }));
-  }, [listings]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -271,6 +230,7 @@ export default function Dashboard() {
                   onFilterChange={handleFilterChange} 
                   onResetFilters={handleResetFilters} 
                   currentFilters={currentFilters} 
+                  onSellerNameChange={handleSellerNameChange} // Pass onSellerNameChange
                 />
               </div>
             </div>
@@ -286,30 +246,20 @@ export default function Dashboard() {
                   <p className="text-muted-foreground">Discover items and services from your university community</p>
                 </div>
               </div>
-              
-              {/* Analytics/Overview Section with Chart */}
-              <div className="mb-8 bg-card p-6 rounded-lg shadow-sm border border-border">
-                <h2 className="text-xl font-semibold mb-4">Listings Overview</h2>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--muted))" />
-                      <XAxis dataKey="name" stroke="hsl(var(--foreground))" />
-                      <YAxis stroke="hsl(var(--foreground))" />
-                      <Tooltip 
-                        contentStyle={{ 
-                          backgroundColor: 'hsl(var(--card))', 
-                          borderColor: 'hsl(var(--border))', 
-                          borderRadius: '0.5rem' 
-                        }}
-                        labelStyle={{ color: 'hsl(var(--foreground))' }}
-                        itemStyle={{ color: 'hsl(var(--foreground))' }}
-                      />
-                      <Legend />
-                      <Bar dataKey="listings" fill="hsl(var(--primary-warm))" radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
+              {/* Discount Ad Section */}
+              <div className="mb-8 bg-gradient-to-br from-purple-700 to-indigo-800 text-white p-8 rounded-xl shadow-2xl transform transition-all duration-300 hover:scale-[1.01] text-center relative overflow-hidden">
+                {/* Optional: Add a subtle pattern overlay */}
+                <div className="absolute inset-0 opacity-10" style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.7'%3E%3Cpath d='M4 0h2v20H4zm10 0h2v20h-2zM0 4h20v2H0zm0 10h20v2H0z'/%3E%3C/g%3E%3C/svg%3E\")" }}></div>
+                <h2 className="text-4xl font-extrabold mb-3 relative z-10 drop-shadow-md">Flash Sale!</h2>
+                <p className="text-xl mb-6 relative z-10 opacity-90">Get <span className="font-bold text-yellow-300">20% off</span> all electronics this week!</p>
+                <Button 
+                  variant="secondary" 
+                  size="lg" 
+                  className="text-purple-900 bg-white hover:bg-gray-100 transition-all duration-300 transform hover:scale-105 shadow-lg relative z-10"
+                  onClick={() => navigate('/listings?category=electronics')}
+                >
+                  Shop Now
+                </Button>
               </div>
 
               <div className="bg-card p-4 rounded-lg shadow-sm border border-border">
@@ -382,19 +332,19 @@ export default function Dashboard() {
               </div>
             )}
 
-            {!loading && !error && paginatedListings.length === 0 && (
+            {!loading && !error && filteredAndSortedListings.length === 0 && (
               <div className="text-center py-8">
                 <p className="text-lg text-muted-foreground">No listings found.</p>
               </div>
             )}
 
-            {!loading && !error && paginatedListings.length > 0 && (
+            {!loading && !error && filteredAndSortedListings.length > 0 && (
               <div className={`grid gap-6 ${
                 viewMode === "grid" 
-                  ? "grid-cols-1 md:grid-cols-2 xl:grid-cols-3" 
+                  ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6" 
                   : "grid-cols-1"
               }`}>
-                {paginatedListings.map((listing) => (
+                {filteredAndSortedListings.map((listing) => (
                   <ListingCard
                     key={listing.id}
                     {...listing}
@@ -404,37 +354,6 @@ export default function Dashboard() {
                 ))}
               </div>
             )}
-            
-            {/* Pagination */}
-            <div className="flex items-center justify-center space-x-2 mt-12">
-              <Button 
-                variant="outline" 
-                disabled={currentPage === 1} 
-                onClick={() => handlePageChange(currentPage - 1)}
-                className="flex items-center gap-1"
-              >
-                <ChevronLeft className="h-4 w-4" />
-                Previous
-              </Button>
-              {Array.from({ length: totalPages }, (_, i) => (
-                <Button 
-                  key={i + 1} 
-                  variant={currentPage === i + 1 ? "secondary" : "outline"}
-                  onClick={() => handlePageChange(i + 1)}
-                >
-                  {i + 1}
-                </Button>
-              ))}
-              <Button 
-                variant="outline" 
-                disabled={currentPage === totalPages} 
-                onClick={() => handlePageChange(currentPage + 1)}
-                className="flex items-center gap-1"
-              >
-                Next
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
           </main>
         </div>
       </div>

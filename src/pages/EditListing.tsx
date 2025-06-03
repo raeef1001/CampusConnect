@@ -10,21 +10,14 @@ import { Badge } from "@/components/ui/badge";
 import { Navbar } from "@/components/layout/Navbar";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { FloatingChat } from "@/components/ui/floating-chat";
-<<<<<<< HEAD
-import MultiLocationPickerMap, { LocationData } from "@/components/MultiLocationPickerMap";
-=======
-import { VisibilityControls } from "@/components/marketplace/VisibilityControls";
 import MultiLocationPickerMap from "@/components/MultiLocationPickerMap";
->>>>>>> f4fe690e00dd5322027e4ca7da1a28e707a1b779
+import { VisibilityControls } from "@/components/marketplace/VisibilityControls";
 import { ChevronLeft, Save, Eye, EyeOff } from 'lucide-react';
 import { db, auth } from '@/lib/firebase';
 import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { useToast } from '@/components/ui/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-<<<<<<< HEAD
-=======
 import { VisibilitySettings, LocationData } from '@/types/listing';
->>>>>>> f4fe690e00dd5322027e4ca7da1a28e707a1b779
 
 export default function EditListing() {
   const { id } = useParams<{ id: string }>();
@@ -44,13 +37,10 @@ export default function EditListing() {
   const [deliveryRadius, setDeliveryRadius] = useState<number>(5);
   const [availabilityStatus, setAvailabilityStatus] = useState<'available' | 'sold' | 'reserved' | 'unavailable'>('available');
   const [isAvailable, setIsAvailable] = useState(true);
-<<<<<<< HEAD
-=======
   const [visibilitySettings, setVisibilitySettings] = useState<VisibilitySettings>({
     mode: 'all_students'
   });
   const [userUniversity, setUserUniversity] = useState<string>('');
->>>>>>> f4fe690e00dd5322027e4ca7da1a28e707a1b779
 
   const { toast } = useToast();
 
@@ -70,8 +60,6 @@ export default function EditListing() {
       }
 
       try {
-<<<<<<< HEAD
-=======
         // Fetch user data to get university
         const userDocRef = doc(db, "users", user.uid);
         const userDocSnap = await getDoc(userDocRef);
@@ -80,7 +68,6 @@ export default function EditListing() {
           setUserUniversity(userData.university || '');
         }
 
->>>>>>> f4fe690e00dd5322027e4ca7da1a28e707a1b779
         const docRef = doc(db, "listings", id);
         const docSnap = await getDoc(docRef);
 
@@ -111,14 +98,11 @@ export default function EditListing() {
           setDeliveryRadius(listingData.deliveryRadius || 5);
           setAvailabilityStatus(listingData.availabilityStatus || 'available');
           setIsAvailable(listingData.isAvailable !== false); // Default to true if not set
-<<<<<<< HEAD
-=======
           
           // Set visibility settings with defaults
           setVisibilitySettings(listingData.visibilitySettings || {
             mode: 'all_students'
           });
->>>>>>> f4fe690e00dd5322027e4ca7da1a28e707a1b779
         } else {
           setError("Listing not found.");
         }
@@ -175,10 +159,7 @@ export default function EditListing() {
         deliveryRadius: deliveryRadius,
         isAvailable: isAvailable,
         availabilityStatus: availabilityStatus,
-<<<<<<< HEAD
-=======
         visibilitySettings: visibilitySettings,
->>>>>>> f4fe690e00dd5322027e4ca7da1a28e707a1b779
         updatedAt: serverTimestamp(),
       };
 
@@ -296,11 +277,7 @@ export default function EditListing() {
               </Button>
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-<<<<<<< HEAD
-                {/* Availability Controls */}
-=======
                 {/* Availability and Visibility Controls */}
->>>>>>> f4fe690e00dd5322027e4ca7da1a28e707a1b779
                 <div className="lg:col-span-1 order-1 lg:order-2">
                   <div className="sticky top-6 space-y-6">
                     <Card>
@@ -349,8 +326,6 @@ export default function EditListing() {
                         </div>
                       </CardContent>
                     </Card>
-<<<<<<< HEAD
-=======
 
                     {/* Visibility Controls */}
                     <VisibilityControls
@@ -358,7 +333,6 @@ export default function EditListing() {
                       onVisibilityChange={setVisibilitySettings}
                       userUniversity={userUniversity}
                     />
->>>>>>> f4fe690e00dd5322027e4ca7da1a28e707a1b779
                   </div>
                 </div>
 

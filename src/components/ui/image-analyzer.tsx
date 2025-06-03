@@ -83,10 +83,10 @@ export function ImageAnalyzer({ onAnalysisComplete, onImageSelected }: ImageAnal
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-purple-900">
           <Sparkles className="h-5 w-5" />
-          AI Image Analyzer
+          Image Analyzer
         </CardTitle>
         <CardDescription>
-          Upload an image and let AI automatically fill in your listing details
+          Upload an image and let the system automatically fill in your listing details
         </CardDescription>
       </CardHeader>
       
@@ -136,7 +136,7 @@ export function ImageAnalyzer({ onAnalysisComplete, onImageSelected }: ImageAnal
                 disabled={!selectedImage}
               >
                 <Sparkles className="h-4 w-4 mr-2" />
-                Analyze Image with AI
+                Analyze Image
               </Button>
             )}
           </div>
@@ -147,7 +147,7 @@ export function ImageAnalyzer({ onAnalysisComplete, onImageSelected }: ImageAnal
           <div className="flex items-center justify-center py-8">
             <div className="text-center">
               <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2 text-purple-600" />
-              <p className="text-sm text-gray-600">AI is analyzing your image...</p>
+              <p className="text-sm text-gray-600">Analyzing your image...</p>
               <p className="text-xs text-gray-500 mt-1">This may take a few seconds</p>
             </div>
           </div>
@@ -178,7 +178,7 @@ export function ImageAnalyzer({ onAnalysisComplete, onImageSelected }: ImageAnal
                   <span className="font-medium">Title:</span> {analysisResult.title}
                 </div>
                 <div>
-                  <span className="font-medium">Category:</span> {analysisResult.category}
+                  <span className="font-medium">Categories:</span> {analysisResult.categories.join(', ')}
                 </div>
                 <div>
                   <span className="font-medium">Condition:</span> {analysisResult.condition}
@@ -195,7 +195,7 @@ export function ImageAnalyzer({ onAnalysisComplete, onImageSelected }: ImageAnal
             <Alert>
               <CheckCircle className="h-4 w-4" />
               <AlertDescription>
-                The form has been automatically filled with AI-generated details. You can review and edit them before creating your listing.
+                The form has been automatically filled with generated details. You can review and edit them before creating your listing.
               </AlertDescription>
             </Alert>
 
@@ -223,7 +223,7 @@ export function ImageAnalyzer({ onAnalysisComplete, onImageSelected }: ImageAnal
             <Camera className="h-12 w-12 mx-auto mb-3 text-purple-400" />
             <p className="text-sm text-gray-600 mb-1">Upload a clear image of your item</p>
             <p className="text-xs text-gray-500">
-              AI will analyze the image and automatically fill in the listing details
+              The system will analyze the image and automatically fill in the listing details
             </p>
           </div>
         )}

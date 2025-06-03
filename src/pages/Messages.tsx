@@ -5,10 +5,7 @@ import { FloatingChat } from "@/components/ui/floating-chat";
 import { Link, useLocation, useParams } from "react-router-dom";
 import { auth, db, storage } from "@/lib/firebase";
 import { collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, getDocs, doc, getDoc, updateDoc, Timestamp, FieldValue } from "firebase/firestore";
-<<<<<<< HEAD
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-=======
->>>>>>> f4fe690e00dd5322027e4ca7da1a28e707a1b779
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Send, User, MessageSquare, Image as ImageIcon, ShoppingCart, DollarSign, X } from "lucide-react"; 
@@ -20,8 +17,6 @@ import { addNotification } from "@/utils/notifications";
 import { ListingCard } from "@/components/marketplace/ListingCard";
 import { Listing } from "@/types/listing"; 
 import { ListingSelector } from "@/components/marketplace/ListingSelector";
-<<<<<<< HEAD
-=======
 import { useToast } from "@/hooks/use-toast";
 import { 
   encryptMessage, 
@@ -31,7 +26,6 @@ import {
   getOtherParticipant, 
   isEncryptionSupported 
 } from "@/utils/encryption";
->>>>>>> f4fe690e00dd5322027e4ca7da1a28e707a1b779
 
 interface Chat {
   id: string;
@@ -40,11 +34,8 @@ interface Chat {
   createdAt: Timestamp | FieldValue;
   updatedAt?: Timestamp | FieldValue;
   listingId?: string; 
-<<<<<<< HEAD
-=======
   // Encryption field for last message
   encryptedLastMessage?: string;
->>>>>>> f4fe690e00dd5322027e4ca7da1a28e707a1b779
 }
 
 interface Message {
@@ -57,13 +48,10 @@ interface Message {
   cartId?: string;
   paymentStatus?: 'pending' | 'completed' | 'failed';
   createdAt: Timestamp | FieldValue;
-<<<<<<< HEAD
-=======
   // Encryption fields
   encrypted?: boolean;
   encryptedText?: string;
   encryptedImage?: string;
->>>>>>> f4fe690e00dd5322027e4ca7da1a28e707a1b779
 }
 
 interface UserProfile {
@@ -80,11 +68,8 @@ export default function Messages() {
   const [chats, setChats] = useState<Chat[]>([]);
   const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
-<<<<<<< HEAD
-=======
   const [decryptedMessages, setDecryptedMessages] = useState<{ [key: string]: { text?: string; image?: string } }>({});
   const [decryptedLastMessages, setDecryptedLastMessages] = useState<{ [key: string]: string }>({});
->>>>>>> f4fe690e00dd5322027e4ca7da1a28e707a1b779
   const [newMessage, setNewMessage] = useState("");
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
@@ -93,22 +78,16 @@ export default function Messages() {
   const [userProfiles, setUserProfiles] = useState<{ [key: string]: UserProfile }>({});
   const [fetchedListings, setFetchedListings] = useState<{ [key: string]: Listing }>({});
   const [isListingSelectorOpen, setIsListingSelectorOpen] = useState(false);
-<<<<<<< HEAD
-=======
   const [shouldSendMessage, setShouldSendMessage] = useState(false);
   const [initialMessageSent, setInitialMessageSent] = useState(false);
 
   const { toast } = useToast();
->>>>>>> f4fe690e00dd5322027e4ca7da1a28e707a1b779
 
   const location = useLocation();
   const { chatId } = useParams<{ chatId: string }>();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-<<<<<<< HEAD
-=======
   const initialMessageRef = useRef<string | null>(null);
->>>>>>> f4fe690e00dd5322027e4ca7da1a28e707a1b779
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -118,7 +97,8 @@ export default function Messages() {
     if (event.target.files && event.target.files[0]) {
       setSelectedImage(event.target.files[0]);
       setSelectedListing(null);
-<<<<<<< HEAD
+    } else {
+      console.log("No image selected.");
     }
   };
 
@@ -127,10 +107,6 @@ export default function Messages() {
     const storageRef = ref(storage, `chat_images/${currentUser.uid}/${imageFile.name}_${Date.now()}`);
     await uploadBytes(storageRef, imageFile);
     return getDownloadURL(storageRef);
-=======
-    } else {
-      console.log("No image selected.");
-    }
   };
 
   const fileToBase64 = (file: File): Promise<string> => {
@@ -225,7 +201,6 @@ export default function Messages() {
     }
 
     setDecryptedLastMessages(prev => ({ ...prev, ...newDecryptedLastMessages }));
->>>>>>> f4fe690e00dd5322027e4ca7da1a28e707a1b779
   };
 
   useEffect(() => {
@@ -269,10 +244,6 @@ export default function Messages() {
           fetchedChats.forEach(chat => chat.participants.forEach(uid => allParticipantUids.add(uid)));
           await fetchUserProfiles(Array.from(allParticipantUids));
 
-<<<<<<< HEAD
-          const { sellerId, listingId: initialListingId } = location.state || {};
-          let chatToSelect: Chat | null = null;
-=======
           // Decrypt last messages for chat list
           if (user) {
             await decryptLastMessagesAsync(fetchedChats, user.uid);
@@ -287,17 +258,10 @@ export default function Messages() {
             setNewMessage(initialMessage); // Set newMessage immediately
           }
           window.history.replaceState({}, document.title); // Clear state immediately
->>>>>>> f4fe690e00dd5322027e4ca7da1a28e707a1b779
 
           if (chatId) {
             chatToSelect = fetchedChats.find(c => c.id === chatId) || null;
-<<<<<<< HEAD
-          } else if (sellerId && user.uid !== sellerId) {
-            // Handle service provider contact (no listingId needed)
-=======
           } else if (sellerId && initialListingId && user.uid !== sellerId) {
-<<<<<<< HEAD
-=======
             // Fetch the listing details if initialListingId is present
             if (initialListingId) {
               try {
@@ -326,8 +290,6 @@ export default function Messages() {
               }
             }
 
->>>>>>> f4fe690e00dd5322027e4ca7da1a28e707a1b779
->>>>>>> 66aed01a985e70dd3ba017237bc35502a5f8136a
             const existingChat = fetchedChats.find(c =>
               c.participants.includes(sellerId) && c.participants.includes(user.uid)
             );
@@ -354,14 +316,10 @@ export default function Messages() {
                 return isExisting ? prev : [chatToSelect!, ...prev];
               });
             }
-<<<<<<< HEAD
-            window.history.replaceState({}, document.title);
-=======
             // Set shouldSendMessage to true if initialMessage was present
             if (initialMessage) {
               setShouldSendMessage(true);
             }
->>>>>>> f4fe690e00dd5322027e4ca7da1a28e707a1b779
           }
 
           if (chatToSelect) {
@@ -387,10 +345,6 @@ export default function Messages() {
       }
     });
     return () => unsubscribeAuth();
-<<<<<<< HEAD
-  }, [location.state, chatId]); 
-
-=======
   }, [location.state, chatId]);
 
   // Modified useEffect to trigger message sending only once
@@ -404,12 +358,7 @@ export default function Messages() {
       }
       initialMessageRef.current = null; // Clear the ref after sending
     }
-<<<<<<< HEAD
   }, [selectedChat, currentUser, shouldSendMessage, initialMessageSent, newMessage]);
-=======
-  }, [selectedChat, currentUser, newMessage]);
->>>>>>> f4fe690e00dd5322027e4ca7da1a28e707a1b779
->>>>>>> 66aed01a985e70dd3ba017237bc35502a5f8136a
 
   useEffect(() => {
     if (selectedChat) {
@@ -428,14 +377,11 @@ export default function Messages() {
         setLoadingMessages(false);
         scrollToBottom();
 
-<<<<<<< HEAD
-=======
         // Decrypt messages if current user is available
         if (currentUser) {
           await decryptMessagesAsync(newMessages, currentUser.uid, selectedChat.participants);
         }
 
->>>>>>> f4fe690e00dd5322027e4ca7da1a28e707a1b779
         const listingIdsInMessagesToFetch = new Set<string>();
         newMessages.forEach(message => {
           if (message.listingId && !fetchedListings[message.listingId]) {
@@ -502,11 +448,7 @@ export default function Messages() {
     } else {
       setMessages([]);
     }
-<<<<<<< HEAD
-  }, [selectedChat, userProfiles]);
-=======
   }, [selectedChat, userProfiles, currentUser]);
->>>>>>> f4fe690e00dd5322027e4ca7da1a28e707a1b779
 
   const handleSendMessage = async () => {
     if ((newMessage.trim() === "" && !selectedImage && !selectedListing) || !selectedChat || !currentUser) {
@@ -514,21 +456,6 @@ export default function Messages() {
     }
 
     try {
-<<<<<<< HEAD
-      const messagePayload: Partial<Omit<Message, 'id' | 'createdAt'>> & { createdAt: FieldValue } = {
-        senderId: currentUser.uid,
-        createdAt: serverTimestamp(),
-      };
-
-      if (newMessage.trim() !== "") {
-        messagePayload.text = newMessage;
-      }
-
-      if (selectedImage) {
-        const uploadedImageUrl = await uploadImage(selectedImage);
-        if (uploadedImageUrl) {
-          messagePayload.image = uploadedImageUrl;
-=======
       const otherParticipant = getOtherParticipant(selectedChat.participants, currentUser.uid);
       if (!otherParticipant) {
         toast({
@@ -598,37 +525,24 @@ export default function Messages() {
             variant: "destructive",
           });
           return;
->>>>>>> f4fe690e00dd5322027e4ca7da1a28e707a1b779
         }
       }
 
       if (selectedListing) {
         messagePayload.listingId = selectedListing.id;
-<<<<<<< HEAD
-=======
         lastMessageText = `Shared: ${selectedListing.title}`;
->>>>>>> f4fe690e00dd5322027e4ca7da1a28e707a1b779
       }
 
       await addDoc(collection(db, "chats", selectedChat.id, "messages"), messagePayload);
 
-<<<<<<< HEAD
-      let lastMessageText = "Message";
-        if (selectedListing) {
-            lastMessageText = `Shared: ${selectedListing.title}`;
-        } else if (selectedImage) {
-            lastMessageText = "Sent an image";
-        } else if (newMessage.trim()) {
-            lastMessageText = newMessage.trim();
-        }
-      
-      await updateDoc(doc(db, "chats", selectedChat.id), {
-        lastMessage: lastMessageText,
-        updatedAt: serverTimestamp(),
-      });
-=======
       // Update chat with encrypted last message if encryption is supported
-      const chatUpdateData: any = {
+      interface ChatUpdateData {
+        updatedAt: FieldValue;
+        lastMessage?: string;
+        encryptedLastMessage?: string;
+        [key: string]: any; // Add index signature
+      }
+      const chatUpdateData: ChatUpdateData = {
         updatedAt: serverTimestamp(),
       };
 
@@ -646,7 +560,6 @@ export default function Messages() {
       }
 
       await updateDoc(doc(db, "chats", selectedChat.id), chatUpdateData);
->>>>>>> f4fe690e00dd5322027e4ca7da1a28e707a1b779
 
       const chatPartner = getChatPartner(selectedChat);
       if (chatPartner && currentUser) {
@@ -662,10 +575,6 @@ export default function Messages() {
       setSelectedImage(null);
       if(fileInputRef.current) fileInputRef.current.value = "";
       setSelectedListing(null);
-<<<<<<< HEAD
-    } catch (error) {
-      console.error("Error sending message:", error);
-=======
       toast({
         title: "Message sent!",
         description: isEncryptionSupported() ? "Your encrypted message has been sent." : "Your message has been sent.",
@@ -677,7 +586,6 @@ export default function Messages() {
         description: "There was an error sending your message. Please try again.",
         variant: "destructive",
       });
->>>>>>> f4fe690e00dd5322027e4ca7da1a28e707a1b779
     }
   };
 
@@ -689,29 +597,18 @@ export default function Messages() {
     setIsListingSelectorOpen(false);
   };
 
-<<<<<<< HEAD
   // These handlers are kept for potential future use or if ListingCard itself has these actions.
   // For now, the buttons rendered by Messages.tsx for shared listings will be removed.
-=======
->>>>>>> f4fe690e00dd5322027e4ca7da1a28e707a1b779
   const handleAddToCart = async (listingId: string) => {
     if (!currentUser || !listingId) return;
     console.log("Add to cart:", listingId);
     alert(`Item with ID ${listingId} added to cart (dummy action)!`);
-<<<<<<< HEAD
-    // Add actual cart logic if needed
-=======
->>>>>>> f4fe690e00dd5322027e4ca7da1a28e707a1b779
   };
 
   const handlePlaceOrder = async (listingId: string) => {
     if (!currentUser || !listingId) return;
     console.log("Place order for:", listingId);
     alert(`Order placed for item ID ${listingId} (dummy action)!`);
-<<<<<<< HEAD
-    // Add actual order logic if needed
-=======
->>>>>>> f4fe690e00dd5322027e4ca7da1a28e707a1b779
   };
 
   const getChatPartner = (chat: Chat | null): UserProfile | null => {
@@ -720,8 +617,6 @@ export default function Messages() {
     return partnerUid ? userProfiles[partnerUid] : null;
   };
 
-<<<<<<< HEAD
-=======
   // Get display text for message (decrypted if available, fallback to original)
   const getMessageText = (message: Message): string | undefined => {
     if (message.encrypted && decryptedMessages[message.id]?.text) {
@@ -738,7 +633,6 @@ export default function Messages() {
     return message.image;
   };
 
->>>>>>> f4fe690e00dd5322027e4ca7da1a28e707a1b779
   return (
     <div className="min-h-screen bg-background text-foreground">
       <Navbar isAuthenticated={!!currentUser} />
@@ -758,12 +652,9 @@ export default function Messages() {
               )}>
                 <div className="p-4 border-b">
                   <h2 className="text-xl font-semibold">Conversations</h2>
-<<<<<<< HEAD
-=======
                   {isEncryptionSupported() && (
                     <p className="text-xs text-muted-foreground mt-1">🔒 End-to-end encrypted</p>
                   )}
->>>>>>> f4fe690e00dd5322027e4ca7da1a28e707a1b779
                 </div>
                 <div className="flex-1 overflow-y-auto">
                   {loadingChats ? (
@@ -797,11 +688,7 @@ export default function Messages() {
                           <div className="ml-3 flex-1 min-w-0">
                             <p className="font-medium truncate">{partner?.name || "Unknown User"}</p>
                             <p className="text-sm text-muted-foreground line-clamp-1">
-<<<<<<< HEAD
-                              {chat.lastMessage || "No messages yet."}
-=======
                               {decryptedLastMessages[chat.id] || chat.lastMessage || "No messages yet."}
->>>>>>> f4fe690e00dd5322027e4ca7da1a28e707a1b779
                             </p>
                           </div>
                         </div>
@@ -832,11 +719,6 @@ export default function Messages() {
                         <AvatarImage src={getChatPartner(selectedChat)?.avatar || "/placeholder.svg"} alt={getChatPartner(selectedChat)?.name || "User"}/>
                         <AvatarFallback>{getChatPartner(selectedChat)?.name?.split(' ').map(n => n[0]).join('').toUpperCase() || <User className="h-5 w-5" />}</AvatarFallback>
                       </Avatar>
-<<<<<<< HEAD
-                      <h2 className="text-lg md:text-xl font-semibold ml-3">
-                        {getChatPartner(selectedChat)?.name || "Unknown User"}
-                      </h2>
-=======
                       <div className="ml-3 flex-1">
                         <h2 className="text-lg md:text-xl font-semibold">
                           {getChatPartner(selectedChat)?.name || "Unknown User"}
@@ -845,7 +727,6 @@ export default function Messages() {
                           <p className="text-xs text-muted-foreground">🔒 Messages are encrypted</p>
                         )}
                       </div>
->>>>>>> f4fe690e00dd5322027e4ca7da1a28e707a1b779
                     </div>
                     <div className="flex-1 p-4 overflow-y-auto space-y-4 bg-muted/30">
                       {loadingMessages ? (
@@ -857,44 +738,6 @@ export default function Messages() {
                          ))}
                        </div>
                       ) : messages.length > 0 ? (
-<<<<<<< HEAD
-                        messages.map((message) => (
-                          <div
-                            key={message.id}
-                            className={cn("flex", message.senderId === currentUser.uid ? "justify-end" : "justify-start")}
-                          >
-                            <div className={cn(
-                              "max-w-[80%] md:max-w-[70%] p-3 rounded-lg shadow-sm",
-                              message.senderId === currentUser.uid
-                                ? "bg-primary text-primary-foreground rounded-br-none"
-                                : "bg-card border rounded-bl-none"
-                            )}>
-                              {message.text && <p className="whitespace-pre-wrap break-words text-sm md:text-base">{message.text}</p>}
-                              {message.image && (
-                                <img src={message.image} alt="Shared content" className="max-w-full h-auto rounded-md mt-2 cursor-pointer object-contain max-h-64" onClick={() => window.open(message.image, '_blank')} />
-                              )}
-                              {message.listingId && fetchedListings[message.listingId] && (
-                                <div className="mt-2 p-2 bg-background rounded-md border">
-                                  <p className="font-semibold mb-1 text-xs md:text-sm">Shared Product:</p>
-                                  <Link 
-                                    to={`/product/${message.listingId}`}
-                                    className="block hover:bg-muted/30 p-1 rounded-md transition-colors -m-1"
-                                    aria-label={`View details for ${fetchedListings[message.listingId].title}`}
-                                  >
-                                    <ListingCard {...fetchedListings[message.listingId]} />
-                                  </Link>
-                                  {/* ***** MODIFICATION: Removed Add to Cart and Place Order buttons from here ***** */}
-                                </div>
-                              )}
-                              <span className="block text-xs text-right mt-1 opacity-70">
-                                {message.createdAt && (message.createdAt as Timestamp).seconds 
-                                  ? new Date((message.createdAt as Timestamp).seconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
-                                  : 'Sending...'}
-                              </span>
-                            </div>
-                          </div>
-                        ))
-=======
                         messages.map((message) => {
                           const displayText = getMessageText(message);
                           const displayImage = getMessageImage(message);
@@ -949,7 +792,6 @@ export default function Messages() {
                             </div>
                           );
                         })
->>>>>>> f4fe690e00dd5322027e4ca7da1a28e707a1b779
                       ) : (
                         <div className="flex-1 flex items-center justify-center text-muted-foreground">
                           <div className="text-center">
@@ -1076,8 +918,4 @@ export default function Messages() {
       )}
     </div>
   );
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> f4fe690e00dd5322027e4ca7da1a28e707a1b779

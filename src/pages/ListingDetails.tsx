@@ -208,13 +208,9 @@ export default function ListingDetails() {
       return;
     }
     if (listing) {
-<<<<<<< HEAD
-      navigate("/messages", { state: { sellerId: listing.sellerId, listingId: id } });
-=======
       const productLink = `${window.location.origin}/listings/${id}`;
       const initialMessage = `Hi, I'm interested in your listing: ${productLink}`;
       navigate("/messages", { state: { sellerId: listing.sellerId, listingId: id, initialMessage: initialMessage } });
->>>>>>> f4fe690e00dd5322027e4ca7da1a28e707a1b779
     }
   };
 
@@ -396,10 +392,6 @@ export default function ListingDetails() {
                     <LocationDisplay 
                       locations={listing.locations}
                       deliveryRadius={listing.deliveryRadius}
-<<<<<<< HEAD
-                      showFullAddress={true}
-=======
->>>>>>> f4fe690e00dd5322027e4ca7da1a28e707a1b779
                     />
                   </div>
                 )}

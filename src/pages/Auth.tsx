@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,11 +12,7 @@ import { format } from "date-fns";
 import { Calendar as CalendarIcon, Eye, EyeOff, ArrowLeft, Shield, Mail } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-<<<<<<< HEAD
-import { login, signup } from "@/utils/auth"; // Import both login and signup functions
-=======
 import { login, signup, signInWithGoogle, signInWithGitHub } from "@/utils/auth"; // Import OAuth functions
->>>>>>> f4fe690e00dd5322027e4ca7da1a28e707a1b779
 
 export default function Auth() {
   const [showPassword, setShowPassword] = useState(false);
@@ -103,8 +98,6 @@ export default function Auth() {
     } finally {
       setIsLoading(false);
     }
-<<<<<<< HEAD
-=======
   };
 
   const handleGoogleAuth = async () => {
@@ -139,7 +132,6 @@ export default function Auth() {
     } finally {
       setIsLoading(false);
     }
->>>>>>> f4fe690e00dd5322027e4ca7da1a28e707a1b779
   };
 
   return (

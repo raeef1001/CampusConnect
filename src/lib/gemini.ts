@@ -74,7 +74,7 @@ export async function generateListingResponse(
     })) : [];
 
     let prompt = `
-You are a helpful AI assistant for CampusConnect, a student marketplace platform. You help users find products and services listed by other students. You can search listings by:
+You are a helpful virtual assistant for CampusConnect, a student marketplace platform. You help users find products and services listed by other students. You can search listings by:
 - Product title and description
 - Categories
 - Condition
@@ -138,7 +138,7 @@ If you're recommending multiple products, mention the most relevant ones and inc
     const response = await result.response;
     return response.text();
   } catch (error) {
-    console.error('Error generating AI response:', error);
+    console.error('Error generating response:', error);
     return "I'm sorry, I'm having trouble processing your request right now. Please try again later.";
   }
 }
@@ -234,7 +234,7 @@ Be specific about what you see in the image. If it's a textbook, include the sub
         confidence: confidenceMatch ? parseInt(confidenceMatch[1]) : 75
       };
     } else {
-      throw new Error('Failed to parse AI response');
+    throw new Error('Failed to parse response');
     }
   } catch (error) {
     console.error('Error analyzing image:', error);

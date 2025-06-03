@@ -101,9 +101,7 @@ export function Navbar({ isAuthenticated = false, onCreateListing, onLogout }: N
         <div className="container flex h-16 items-center justify-between">
           <div className="flex items-center space-x-2">
             <Link to="/" className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-primary-warm rounded-lg flex items-center justify-center">
-                <span className="text-primary-warm-foreground font-bold text-sm">CC</span>
-              </div>
+              <img src="/logo.png" alt="CampusConnect Logo" className="h-8 w-8" />
               <span className="font-semibold text-xl">CampusConnect</span>
             </Link>
           </div>
@@ -138,9 +136,7 @@ export function Navbar({ isAuthenticated = false, onCreateListing, onLogout }: N
       <div className="container flex h-16 items-center justify-between">
         <div className="flex items-center space-x-2">
           <Link to="/dashboard" className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-primary-warm rounded-lg flex items-center justify-center">
-              <span className="text-primary-warm-foreground font-bold text-sm">CC</span>
-            </div>
+            <img src="/logo.png" alt="CampusConnect Logo" className="h-8 w-8" />
             <span className="font-semibold text-xl">CampusConnect</span>
           </Link>
         </div>
